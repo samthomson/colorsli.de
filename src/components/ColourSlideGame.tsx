@@ -105,7 +105,12 @@ function isGameComplete(board: Board): boolean {
 export function ColourSlideGame() {
   const [gridSize, setGridSize] = useState(10);
   const [board, setBoard] = useState<Board>(() => createRandomBoard(10));
-  const [dragging, setDragging] = useState<{ type: 'row' | 'col'; index: number; start: number } | null>(null);
+  const [dragging, setDragging] = useState<{ 
+    type: 'row' | 'col'; 
+    index: number; 
+    start: number;
+    offset: number;
+  } | null>(null);
   const [matching, setMatching] = useState<{ row: number; col: number }[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [moveCount, setMoveCount] = useState(0);
@@ -148,21 +153,31 @@ export function ColourSlideGame() {
   }, [board]);
 
   const handleMouseDown = (type: 'row' | 'col', index: number, clientPos: number) => {
-    setDragging({ type, index, start: clientPos });
+    setDragging({ type, index, start: clientPos, offset: 0 });
   };
 
   const handleMouseMove = (clientPos: number) => {
     if (!dragging) return;
     
-    const diff = clientPos - dragging.start;
-    const cellSize = type === 'row' ? 
-      window.innerWidth / (gridSize + 2) : 
-      window.innerHeight / (gridSize + 2);
+    const offset = clientPos - dragging.start;
     
-    const threshold = cellSize * 0.5;
+    // Update visual offset
+    setDragging(prev => prev ? { ...prev, offset } : null);
     
-    if (Math.abs(diff) > threshold) {
-      const direction = diff > 0 ? 1 : -1;
+    // Get the container element to calculate cell size
+    const gridElement = document.querySelector('[data-grid]');
+    if (!gridElement) return;
+    
+    const rect = gridElement.getBoundingClientRect();
+    const cellSize = dragging.type === 'row' ? 
+      rect.width / gridSize : 
+      rect.height / gridSize;
+    
+    // Threshold for snapping to next position (70% of cell size for "sticky" feel)
+    const threshold = cellSize * 0.7;
+    
+    if (Math.abs(offset) > threshold) {
+      const direction = offset > 0 ? 1 : -1;
       
       setBoard(prevBoard => {
         const newBoard = prevBoard.map(row => [...row]);
@@ -202,15 +217,14 @@ export function ColourSlideGame() {
       });
       
       setMoveCount(prev => prev + 1);
-      setDragging({ ...dragging, start: clientPos });
+      // Reset start position but keep dragging active
+      setDragging({ ...dragging, start: clientPos, offset: 0 });
     }
   };
 
   const handleMouseUp = () => {
     setDragging(null);
   };
-
-  const type = dragging?.type || 'row';
 
   return (
     <Card className="w-full max-w-4xl shadow-2xl">
@@ -272,8 +286,16 @@ export function ColourSlideGame() {
           onMouseMove={(e) => handleMouseMove(dragging?.type === 'row' ? e.clientX : e.clientY)}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchMove={(e) => {
+            if (dragging) {
+              const touch = e.touches[0];
+              handleMouseMove(dragging.type === 'row' ? touch.clientX : touch.clientY);
+            }
+          }}
+          onTouchEnd={handleMouseUp}
         >
           <div 
+            data-grid
             className="grid gap-1 select-none"
             style={{
               gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
@@ -282,23 +304,44 @@ export function ColourSlideGame() {
             {board.map((row, rowIndex) => (
               row.map((color, colIndex) => {
                 const isMatching = matching.some(m => m.row === rowIndex && m.col === colIndex);
+                const isDraggingRow = dragging?.type === 'row' && dragging?.index === rowIndex;
+                const isDraggingCol = dragging?.type === 'col' && dragging?.index === colIndex;
+                const isDraggingThis = isDraggingRow || isDraggingCol;
+                
+                // Calculate transform based on drag offset
+                let transform = '';
+                if (dragging && isDraggingThis) {
+                  if (isDraggingRow) {
+                    transform = `translateX(${dragging.offset}px)`;
+                  } else {
+                    transform = `translateY(${dragging.offset}px)`;
+                  }
+                }
                 
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     className={cn(
-                      'aspect-square rounded-full transition-all duration-300',
+                      'aspect-square rounded-full',
                       color ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
                       isMatching && 'scale-125 animate-pulse shadow-lg',
-                      dragging?.type === 'row' && dragging?.index === rowIndex && 'ring-2 ring-purple-500',
-                      dragging?.type === 'col' && dragging?.index === colIndex && 'ring-2 ring-purple-500'
+                      isDraggingThis ? 'transition-none' : 'transition-all duration-200',
+                      isDraggingRow && 'ring-2 ring-purple-500 shadow-xl scale-105',
+                      isDraggingCol && 'ring-2 ring-blue-500 shadow-xl scale-105'
                     )}
                     style={{
                       backgroundColor: color || 'transparent',
+                      transform,
                     }}
                     onMouseDown={(e) => {
                       if (color) {
                         handleMouseDown('row', rowIndex, e.clientX);
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      if (color) {
+                        const touch = e.touches[0];
+                        handleMouseDown('row', rowIndex, touch.clientX);
                       }
                     }}
                   />
@@ -311,15 +354,22 @@ export function ColourSlideGame() {
           {board.map((_, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
-              className="absolute left-0 w-6 h-full cursor-ew-resize opacity-0 hover:opacity-100 transition-opacity"
+              className="absolute left-0 w-8 cursor-ew-resize opacity-0 hover:opacity-100 transition-opacity touch-none"
               style={{
                 top: `${(rowIndex / gridSize) * 100}%`,
                 height: `${100 / gridSize}%`,
               }}
-              onMouseDown={(e) => handleMouseDown('row', rowIndex, e.clientX)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleMouseDown('row', rowIndex, e.clientX);
+              }}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                handleMouseDown('row', rowIndex, touch.clientX);
+              }}
             >
               <div className="w-full h-full flex items-center justify-center bg-purple-500/20 rounded-l">
-                <div className="w-1 h-4 bg-purple-500 rounded" />
+                <div className="w-1 h-6 bg-purple-500 rounded" />
               </div>
             </div>
           ))}
@@ -328,15 +378,22 @@ export function ColourSlideGame() {
           {board[0].map((_, colIndex) => (
             <div
               key={`col-${colIndex}`}
-              className="absolute top-0 h-6 w-full cursor-ns-resize opacity-0 hover:opacity-100 transition-opacity"
+              className="absolute top-0 h-8 cursor-ns-resize opacity-0 hover:opacity-100 transition-opacity touch-none"
               style={{
                 left: `${(colIndex / gridSize) * 100}%`,
                 width: `${100 / gridSize}%`,
               }}
-              onMouseDown={(e) => handleMouseDown('col', colIndex, e.clientY)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleMouseDown('col', colIndex, e.clientY);
+              }}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                handleMouseDown('col', colIndex, touch.clientY);
+              }}
             >
-              <div className="w-full h-full flex items-center justify-center bg-purple-500/20 rounded-t">
-                <div className="h-1 w-4 bg-purple-500 rounded" />
+              <div className="w-full h-full flex items-center justify-center bg-blue-500/20 rounded-t">
+                <div className="h-1 w-6 bg-blue-500 rounded" />
               </div>
             </div>
           ))}
