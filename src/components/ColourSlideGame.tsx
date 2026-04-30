@@ -53,49 +53,81 @@ function createRandomBoard(size: number): Board {
 function checkMatches(board: Board): { row: number; col: number }[] {
   const matches: { row: number; col: number }[] = [];
   const size = board.length;
+  const cleared = new Set<string>();
   
-  // Check horizontal matches
+  // Check horizontal matches - only exact groups of 4
   for (let row = 0; row < size; row++) {
     for (let col = 0; col <= size - 4; col++) {
       const color = board[row][col];
-      if (color && 
-          board[row][col + 1] === color &&
-          board[row][col + 2] === color &&
-          board[row][col + 3] === color) {
-        matches.push(
-          { row, col },
-          { row, col: col + 1 },
-          { row, col: col + 2 },
-          { row, col: col + 3 }
-        );
+      if (!color) continue;
+      
+      // Check if this is exactly 4 in a row (not part of a longer sequence)
+      const isFourInRow = 
+        board[row][col + 1] === color &&
+        board[row][col + 2] === color &&
+        board[row][col + 3] === color &&
+        (col === 0 || board[row][col - 1] !== color) && // Not preceded by same color
+        (col + 4 >= size || board[row][col + 4] !== color); // Not followed by same color
+      
+      if (isFourInRow) {
+        const cellKeys = [
+          `${row},${col}`,
+          `${row},${col + 1}`,
+          `${row},${col + 2}`,
+          `${row},${col + 3}`
+        ];
+        
+        // Only add if none of these cells are already marked for clearing
+        if (!cellKeys.some(key => cleared.has(key))) {
+          cellKeys.forEach(key => cleared.add(key));
+          matches.push(
+            { row, col },
+            { row, col: col + 1 },
+            { row, col: col + 2 },
+            { row, col: col + 3 }
+          );
+        }
       }
     }
   }
   
-  // Check vertical matches
+  // Check vertical matches - only exact groups of 4
   for (let col = 0; col < size; col++) {
     for (let row = 0; row <= size - 4; row++) {
       const color = board[row][col];
-      if (color &&
-          board[row + 1][col] === color &&
-          board[row + 2][col] === color &&
-          board[row + 3][col] === color) {
-        matches.push(
-          { row, col },
-          { row: row + 1, col },
-          { row: row + 2, col },
-          { row: row + 3, col }
-        );
+      if (!color) continue;
+      
+      // Check if this is exactly 4 in a column (not part of a longer sequence)
+      const isFourInCol =
+        board[row + 1][col] === color &&
+        board[row + 2][col] === color &&
+        board[row + 3][col] === color &&
+        (row === 0 || board[row - 1][col] !== color) && // Not preceded by same color
+        (row + 4 >= size || board[row + 4][col] !== color); // Not followed by same color
+      
+      if (isFourInCol) {
+        const cellKeys = [
+          `${row},${col}`,
+          `${row + 1},${col}`,
+          `${row + 2},${col}`,
+          `${row + 3},${col}`
+        ];
+        
+        // Only add if none of these cells are already marked for clearing
+        if (!cellKeys.some(key => cleared.has(key))) {
+          cellKeys.forEach(key => cleared.add(key));
+          matches.push(
+            { row, col },
+            { row: row + 1, col },
+            { row: row + 2, col },
+            { row: row + 3, col }
+          );
+        }
       }
     }
   }
   
-  // Remove duplicates
-  const uniqueMatches = matches.filter((match, index) => {
-    return matches.findIndex(m => m.row === match.row && m.col === match.col) === index;
-  });
-  
-  return uniqueMatches;
+  return matches;
 }
 
 function isGameComplete(board: Board): boolean {
