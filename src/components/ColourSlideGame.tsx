@@ -336,6 +336,7 @@ export function ColourSlideGame() {
   const [blocked, setBlocked] = useState<{ row: number; col: number }[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [moveCount, setMoveCount] = useState(0);
+  const [shouldCheckMatches, setShouldCheckMatches] = useState(false);
 
   const resetGame = useCallback((size: number) => {
     setBoard(createRandomBoard(size));
@@ -346,11 +347,19 @@ export function ColourSlideGame() {
     setMoveCount(0);
   }, []);
 
+  // Update blocked cells whenever board changes (for visual warning)
   useEffect(() => {
-    const matches = checkMatches(board);
     const blockedCells = checkBlocked(board);
-    
     setBlocked(blockedCells);
+  }, [board]);
+
+  // Only check for matches when explicitly triggered (on mouse up)
+  useEffect(() => {
+    if (!shouldCheckMatches) return;
+    
+    setShouldCheckMatches(false);
+    
+    const matches = checkMatches(board);
     
     if (matches.length > 0) {
       setMatching(matches);
@@ -377,7 +386,7 @@ export function ColourSlideGame() {
         }, 100);
       }, 600);
     }
-  }, [board]);
+  }, [shouldCheckMatches, board]);
 
   const handleMouseDown = (rowIndex: number, colIndex: number, clientX: number, clientY: number) => {
     setDragging({ 
@@ -483,6 +492,10 @@ export function ColourSlideGame() {
   };
 
   const handleMouseUp = () => {
+    if (dragging && dragging.type !== 'undecided') {
+      // Only check for matches if we actually dragged (not just clicked)
+      setShouldCheckMatches(true);
+    }
     setDragging(null);
   };
 
