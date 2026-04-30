@@ -115,20 +115,69 @@ function createRandomBoard(size: number): Board {
     
     attempts++;
     
-    // Check if this board has any matches
-    const matches = checkMatches(board);
-    if (matches.length === 0) {
-      break; // Good board, no initial matches
+    // Check if this board has any 4+ in a row sequences
+    const hasFourPlus = hasAnyFourInARow(board);
+    const blockedCells = checkBlocked(board);
+    
+    if (!hasFourPlus && blockedCells.length === 0) {
+      break; // Good board: no 4+ sequences and no blocked cells
     }
     
     // Safety limit to prevent infinite loop
     if (attempts >= maxAttempts) {
-      console.warn('Could not generate board without matches after', maxAttempts, 'attempts');
+      console.warn('Could not generate valid board after', maxAttempts, 'attempts. Using best attempt.');
       break;
     }
   } while (true);
   
   return board;
+}
+
+// Check if board has any sequence of 4 or more in a row (for initial board validation)
+function hasAnyFourInARow(board: Board): boolean {
+  const size = board.length;
+  
+  // Check horizontal sequences of 4+
+  for (let row = 0; row < size; row++) {
+    let currentColor: Color = null;
+    let count = 0;
+    
+    for (let col = 0; col <= size; col++) {
+      const color = col < size ? board[row][col] : null;
+      
+      if (color === currentColor && color !== null) {
+        count++;
+        if (count >= 4) {
+          return true; // Found 4+ in a row
+        }
+      } else {
+        currentColor = color;
+        count = 1;
+      }
+    }
+  }
+  
+  // Check vertical sequences of 4+
+  for (let col = 0; col < size; col++) {
+    let currentColor: Color = null;
+    let count = 0;
+    
+    for (let row = 0; row <= size; row++) {
+      const color = row < size ? board[row][col] : null;
+      
+      if (color === currentColor && color !== null) {
+        count++;
+        if (count >= 4) {
+          return true; // Found 4+ in a column
+        }
+      } else {
+        currentColor = color;
+        count = 1;
+      }
+    }
+  }
+  
+  return false; // No sequences of 4+ found
 }
 
 function checkMatches(board: Board): { row: number; col: number }[] {
