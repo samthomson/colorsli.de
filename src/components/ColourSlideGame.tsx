@@ -130,6 +130,63 @@ function checkMatches(board: Board): { row: number; col: number }[] {
   return matches;
 }
 
+function checkBlocked(board: Board): { row: number; col: number }[] {
+  const blocked: { row: number; col: number }[] = [];
+  const size = board.length;
+  
+  // Check for horizontal sequences of 5+
+  for (let row = 0; row < size; row++) {
+    let currentColor: Color = null;
+    let count = 0;
+    let startCol = 0;
+    
+    for (let col = 0; col <= size; col++) {
+      const color = col < size ? board[row][col] : null;
+      
+      if (color === currentColor && color !== null) {
+        count++;
+      } else {
+        // Sequence ended, check if it was 5+
+        if (count >= 5 && currentColor !== null) {
+          for (let i = startCol; i < startCol + count; i++) {
+            blocked.push({ row, col: i });
+          }
+        }
+        currentColor = color;
+        count = 1;
+        startCol = col;
+      }
+    }
+  }
+  
+  // Check for vertical sequences of 5+
+  for (let col = 0; col < size; col++) {
+    let currentColor: Color = null;
+    let count = 0;
+    let startRow = 0;
+    
+    for (let row = 0; row <= size; row++) {
+      const color = row < size ? board[row][col] : null;
+      
+      if (color === currentColor && color !== null) {
+        count++;
+      } else {
+        // Sequence ended, check if it was 5+
+        if (count >= 5 && currentColor !== null) {
+          for (let i = startRow; i < startRow + count; i++) {
+            blocked.push({ row: i, col });
+          }
+        }
+        currentColor = color;
+        count = 1;
+        startRow = row;
+      }
+    }
+  }
+  
+  return blocked;
+}
+
 function isGameComplete(board: Board): boolean {
   return board.every(row => row.every(cell => cell === null));
 }
@@ -146,6 +203,7 @@ export function ColourSlideGame() {
     offsetY: number;
   } | null>(null);
   const [matching, setMatching] = useState<{ row: number; col: number }[]>([]);
+  const [blocked, setBlocked] = useState<{ row: number; col: number }[]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [moveCount, setMoveCount] = useState(0);
 
@@ -153,12 +211,17 @@ export function ColourSlideGame() {
     setBoard(createRandomBoard(size));
     setGridSize(size);
     setMatching([]);
+    setBlocked([]);
     setIsComplete(false);
     setMoveCount(0);
   }, []);
 
   useEffect(() => {
     const matches = checkMatches(board);
+    const blockedCells = checkBlocked(board);
+    
+    setBlocked(blockedCells);
+    
     if (matches.length > 0) {
       setMatching(matches);
       
@@ -339,9 +402,18 @@ export function ColourSlideGame() {
           </Button>
         </div>
         
-        <p className="text-sm text-muted-foreground">
-          Slide rows and columns to match 4 colors in a row. Click and drag to slide!
-        </p>
+        {blocked.length > 0 ? (
+          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 p-3 rounded-md border border-red-200 dark:border-red-800">
+            <span className="font-bold text-lg">!</span>
+            <p>
+              <strong>5+ in a row detected!</strong> Break them apart - you need exactly 4 to match.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Slide rows and columns to match 4 colors in a row. Click and drag to slide!
+          </p>
+        )}
       </CardHeader>
       
       <CardContent>
@@ -371,6 +443,7 @@ export function ColourSlideGame() {
             {board.map((row, rowIndex) => (
               row.map((color, colIndex) => {
                 const isMatching = matching.some(m => m.row === rowIndex && m.col === colIndex);
+                const isBlocked = blocked.some(b => b.row === rowIndex && b.col === colIndex);
                 const isDraggingRow = dragging?.type === 'row' && dragging?.index === rowIndex;
                 const isDraggingCol = dragging?.type === 'col' && dragging?.index === colIndex;
                 const isDraggingThis = isDraggingRow || isDraggingCol;
@@ -389,12 +462,13 @@ export function ColourSlideGame() {
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     className={cn(
-                      'aspect-square rounded-full',
+                      'aspect-square rounded-full relative',
                       color ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
                       isMatching && 'scale-125 animate-pulse shadow-lg',
+                      isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
                       isDraggingThis ? 'transition-none' : 'transition-all duration-200',
-                      isDraggingRow && 'ring-2 ring-purple-500 shadow-xl scale-105',
-                      isDraggingCol && 'ring-2 ring-blue-500 shadow-xl scale-105'
+                      isDraggingRow && !isBlocked && 'ring-2 ring-purple-500 shadow-xl scale-105',
+                      isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105'
                     )}
                     style={{
                       backgroundColor: color || 'transparent',
@@ -412,7 +486,15 @@ export function ColourSlideGame() {
                         handleMouseDown(rowIndex, colIndex, touch.clientX, touch.clientY);
                       }
                     }}
-                  />
+                  >
+                    {isBlocked && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-white text-xs font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                          !
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })
             ))}
