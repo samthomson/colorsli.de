@@ -22,23 +22,22 @@ const COLORS = [
 function createRandomBoard(size: number): Board {
   const totalCells = size * size;
   const groupsOfFour = Math.floor(totalCells / 4);
+  const leftoverCells = totalCells % 4; // These will be pre-cleared
   
   // Determine how many colors to use based on grid size
-  // We want to use colors that divide evenly into the number of groups
+  // Use more colors for larger grids to make it interesting
   let numColors = COLORS.length;
   
-  // Find the best number of colors that creates balanced distribution
-  // Priority: use fewer colors for smaller grids, more for larger
   if (groupsOfFour <= 4) {
-    numColors = 1; // 4x4 or smaller: 1 color
+    numColors = Math.min(2, COLORS.length); // Small grids: 2 colors
   } else if (groupsOfFour <= 9) {
-    numColors = Math.min(3, COLORS.length); // 6x6: up to 3 colors
+    numColors = Math.min(3, COLORS.length); // 6x6: 3 colors
   } else if (groupsOfFour <= 16) {
-    numColors = Math.min(4, COLORS.length); // 8x8: up to 4 colors
+    numColors = Math.min(4, COLORS.length); // 8x8: 4 colors
   } else if (groupsOfFour <= 25) {
-    numColors = Math.min(5, COLORS.length); // 10x10: up to 5 colors
+    numColors = Math.min(5, COLORS.length); // 10x10: 5 colors
   } else {
-    numColors = Math.min(6, COLORS.length); // 12x12: up to 6 colors
+    numColors = Math.min(6, COLORS.length); // 12x12+: 6 colors
   }
   
   // Calculate how many groups of 4 per color
@@ -55,6 +54,11 @@ function createRandomBoard(size: number): Board {
     }
   }
   
+  // Add null cells for leftovers (pre-cleared)
+  for (let i = 0; i < leftoverCells; i++) {
+    colors.push(null);
+  }
+  
   // Shuffle the colors
   for (let i = colors.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -67,7 +71,7 @@ function createRandomBoard(size: number): Board {
   for (let row = 0; row < size; row++) {
     const rowArray: Color[] = [];
     for (let col = 0; col < size; col++) {
-      rowArray.push(colors[colorIndex++] || null);
+      rowArray.push(colors[colorIndex++]);
     }
     board.push(rowArray);
   }
@@ -404,9 +408,13 @@ export function ColourSlideGame() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="5">5x5</SelectItem>
                 <SelectItem value="6">6x6</SelectItem>
+                <SelectItem value="7">7x7</SelectItem>
                 <SelectItem value="8">8x8</SelectItem>
+                <SelectItem value="9">9x9</SelectItem>
                 <SelectItem value="10">10x10</SelectItem>
+                <SelectItem value="11">11x11</SelectItem>
                 <SelectItem value="12">12x12</SelectItem>
               </SelectContent>
             </Select>
