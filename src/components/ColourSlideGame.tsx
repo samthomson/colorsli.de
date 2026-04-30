@@ -44,19 +44,41 @@ function createRandomBoard(size: number): Board {
   const groupsPerColor = Math.floor(groupsOfFour / numColors);
   const remainder = groupsOfFour % numColors;
   
-  // Create array with balanced color distribution
-  const colors: Color[] = [];
+  // Create the MASTER color distribution - this is the source of truth
+  const masterColors: Color[] = [];
   for (let i = 0; i < numColors; i++) {
     const color = COLORS[i];
     const groups = groupsPerColor + (i < remainder ? 1 : 0);
     for (let j = 0; j < groups; j++) {
-      colors.push(color, color, color, color);
+      masterColors.push(color, color, color, color);
     }
   }
   
   // Add null cells for leftovers (pre-cleared)
   for (let i = 0; i < leftoverCells; i++) {
-    colors.push(null);
+    masterColors.push(null);
+  }
+  
+  // Validation function to ensure color counts are correct
+  const validateColorCounts = (arr: Color[]): boolean => {
+    const counts = new Map<Color, number>();
+    arr.forEach(color => {
+      counts.set(color, (counts.get(color) || 0) + 1);
+    });
+    
+    // Every non-null color must appear in multiples of 4
+    for (const [color, count] of counts.entries()) {
+      if (color !== null && count % 4 !== 0) {
+        console.error(`Color ${color} has count ${count}, not a multiple of 4!`);
+        return false;
+      }
+    }
+    return true;
+  };
+  
+  // Validate master array
+  if (!validateColorCounts(masterColors)) {
+    console.error('Master color array is invalid!');
   }
   
   // Keep shuffling until we get a board with no initial matches
@@ -65,10 +87,19 @@ function createRandomBoard(size: number): Board {
   const maxAttempts = 100;
   
   do {
-    // Shuffle the colors
+    // Create a FRESH COPY of the master array for each shuffle attempt
+    const colors = [...masterColors];
+    
+    // Shuffle this copy
     for (let i = colors.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    
+    // Validate after shuffle (paranoid check)
+    if (!validateColorCounts(colors)) {
+      console.error('Shuffled array corrupted color counts!');
+      break;
     }
     
     // Create board
