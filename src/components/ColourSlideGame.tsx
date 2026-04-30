@@ -106,10 +106,12 @@ export function ColourSlideGame() {
   const [gridSize, setGridSize] = useState(10);
   const [board, setBoard] = useState<Board>(() => createRandomBoard(10));
   const [dragging, setDragging] = useState<{ 
-    type: 'row' | 'col'; 
+    type: 'row' | 'col' | 'undecided'; 
     index: number; 
-    start: number;
-    offset: number;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
   } | null>(null);
   const [matching, setMatching] = useState<{ row: number; col: number }[]>([]);
   const [isComplete, setIsComplete] = useState(false);
@@ -152,29 +154,62 @@ export function ColourSlideGame() {
     }
   }, [board]);
 
-  const handleMouseDown = (type: 'row' | 'col', index: number, clientPos: number) => {
-    setDragging({ type, index, start: clientPos, offset: 0 });
+  const handleMouseDown = (rowIndex: number, colIndex: number, clientX: number, clientY: number) => {
+    setDragging({ 
+      type: 'undecided', 
+      index: rowIndex * gridSize + colIndex, 
+      startX: clientX, 
+      startY: clientY,
+      offsetX: 0,
+      offsetY: 0
+    });
   };
 
-  const handleMouseMove = (clientPos: number) => {
+  const handleMouseMove = (clientX: number, clientY: number) => {
     if (!dragging) return;
     
-    const offset = clientPos - dragging.start;
+    const offsetX = clientX - dragging.startX;
+    const offsetY = clientY - dragging.startY;
     
-    // Update visual offset
-    setDragging(prev => prev ? { ...prev, offset } : null);
+    let newDragging = { ...dragging, offsetX, offsetY };
+    
+    // Determine direction if undecided
+    if (dragging.type === 'undecided') {
+      const absX = Math.abs(offsetX);
+      const absY = Math.abs(offsetY);
+      
+      // Need at least 5px movement to decide direction
+      if (absX > 5 || absY > 5) {
+        if (absX > absY) {
+          // Horizontal movement - drag the row
+          const rowIndex = Math.floor(dragging.index / gridSize);
+          newDragging = { ...newDragging, type: 'row', index: rowIndex };
+        } else {
+          // Vertical movement - drag the column
+          const colIndex = dragging.index % gridSize;
+          newDragging = { ...newDragging, type: 'col', index: colIndex };
+        }
+      }
+    }
+    
+    setDragging(newDragging);
+    
+    // Only snap if we've decided on a direction
+    if (newDragging.type === 'undecided') return;
     
     // Get the container element to calculate cell size
     const gridElement = document.querySelector('[data-grid]');
     if (!gridElement) return;
     
     const rect = gridElement.getBoundingClientRect();
-    const cellSize = dragging.type === 'row' ? 
+    const cellSize = newDragging.type === 'row' ? 
       rect.width / gridSize : 
       rect.height / gridSize;
     
     // Threshold for snapping to next position (70% of cell size for "sticky" feel)
     const threshold = cellSize * 0.7;
+    
+    const offset = newDragging.type === 'row' ? offsetX : offsetY;
     
     if (Math.abs(offset) > threshold) {
       const direction = offset > 0 ? 1 : -1;
@@ -182,8 +217,8 @@ export function ColourSlideGame() {
       setBoard(prevBoard => {
         const newBoard = prevBoard.map(row => [...row]);
         
-        if (dragging.type === 'row') {
-          const row = newBoard[dragging.index];
+        if (newDragging.type === 'row') {
+          const row = newBoard[newDragging.index];
           if (direction > 0) {
             // Slide right
             const last = row.pop()!;
@@ -195,7 +230,7 @@ export function ColourSlideGame() {
           }
         } else {
           // Slide column
-          const col = dragging.index;
+          const col = newDragging.index;
           const column = newBoard.map(row => row[col]);
           
           if (direction > 0) {
@@ -218,7 +253,7 @@ export function ColourSlideGame() {
       
       setMoveCount(prev => prev + 1);
       // Reset start position but keep dragging active
-      setDragging({ ...dragging, start: clientPos, offset: 0 });
+      setDragging({ ...newDragging, startX: clientX, startY: clientY, offsetX: 0, offsetY: 0 });
     }
   };
 
@@ -283,13 +318,13 @@ export function ColourSlideGame() {
           style={{ 
             maxWidth: `${Math.min(600, gridSize * 50)}px`,
           }}
-          onMouseMove={(e) => handleMouseMove(dragging?.type === 'row' ? e.clientX : e.clientY)}
+          onMouseMove={(e) => handleMouseMove(e.clientX, e.clientY)}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onTouchMove={(e) => {
             if (dragging) {
               const touch = e.touches[0];
-              handleMouseMove(dragging.type === 'row' ? touch.clientX : touch.clientY);
+              handleMouseMove(touch.clientX, touch.clientY);
             }
           }}
           onTouchEnd={handleMouseUp}
@@ -312,9 +347,9 @@ export function ColourSlideGame() {
                 let transform = '';
                 if (dragging && isDraggingThis) {
                   if (isDraggingRow) {
-                    transform = `translateX(${dragging.offset}px)`;
-                  } else {
-                    transform = `translateY(${dragging.offset}px)`;
+                    transform = `translateX(${dragging.offsetX}px)`;
+                  } else if (isDraggingCol) {
+                    transform = `translateY(${dragging.offsetY}px)`;
                   }
                 }
                 
@@ -335,13 +370,14 @@ export function ColourSlideGame() {
                     }}
                     onMouseDown={(e) => {
                       if (color) {
-                        handleMouseDown('row', rowIndex, e.clientX);
+                        e.preventDefault();
+                        handleMouseDown(rowIndex, colIndex, e.clientX, e.clientY);
                       }
                     }}
                     onTouchStart={(e) => {
                       if (color) {
                         const touch = e.touches[0];
-                        handleMouseDown('row', rowIndex, touch.clientX);
+                        handleMouseDown(rowIndex, colIndex, touch.clientX, touch.clientY);
                       }
                     }}
                   />
@@ -350,53 +386,7 @@ export function ColourSlideGame() {
             ))}
           </div>
           
-          {/* Row indicators */}
-          {board.map((_, rowIndex) => (
-            <div
-              key={`row-${rowIndex}`}
-              className="absolute left-0 w-8 cursor-ew-resize opacity-0 hover:opacity-100 transition-opacity touch-none"
-              style={{
-                top: `${(rowIndex / gridSize) * 100}%`,
-                height: `${100 / gridSize}%`,
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleMouseDown('row', rowIndex, e.clientX);
-              }}
-              onTouchStart={(e) => {
-                const touch = e.touches[0];
-                handleMouseDown('row', rowIndex, touch.clientX);
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center bg-purple-500/20 rounded-l">
-                <div className="w-1 h-6 bg-purple-500 rounded" />
-              </div>
-            </div>
-          ))}
-          
-          {/* Column indicators */}
-          {board[0].map((_, colIndex) => (
-            <div
-              key={`col-${colIndex}`}
-              className="absolute top-0 h-8 cursor-ns-resize opacity-0 hover:opacity-100 transition-opacity touch-none"
-              style={{
-                left: `${(colIndex / gridSize) * 100}%`,
-                width: `${100 / gridSize}%`,
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleMouseDown('col', colIndex, e.clientY);
-              }}
-              onTouchStart={(e) => {
-                const touch = e.touches[0];
-                handleMouseDown('col', colIndex, touch.clientY);
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center bg-blue-500/20 rounded-t">
-                <div className="h-1 w-6 bg-blue-500 rounded" />
-              </div>
-            </div>
-          ))}
+
         </div>
       </CardContent>
     </Card>
