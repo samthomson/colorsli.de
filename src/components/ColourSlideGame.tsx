@@ -21,13 +21,38 @@ const COLORS = [
 
 function createRandomBoard(size: number): Board {
   const totalCells = size * size;
-  const colorsNeeded = Math.floor(totalCells / 4);
+  const groupsOfFour = Math.floor(totalCells / 4);
   
-  // Create array with 4 of each color
+  // Determine how many colors to use based on grid size
+  // We want to use colors that divide evenly into the number of groups
+  let numColors = COLORS.length;
+  
+  // Find the best number of colors that creates balanced distribution
+  // Priority: use fewer colors for smaller grids, more for larger
+  if (groupsOfFour <= 4) {
+    numColors = 1; // 4x4 or smaller: 1 color
+  } else if (groupsOfFour <= 9) {
+    numColors = Math.min(3, COLORS.length); // 6x6: up to 3 colors
+  } else if (groupsOfFour <= 16) {
+    numColors = Math.min(4, COLORS.length); // 8x8: up to 4 colors
+  } else if (groupsOfFour <= 25) {
+    numColors = Math.min(5, COLORS.length); // 10x10: up to 5 colors
+  } else {
+    numColors = Math.min(6, COLORS.length); // 12x12: up to 6 colors
+  }
+  
+  // Calculate how many groups of 4 per color
+  const groupsPerColor = Math.floor(groupsOfFour / numColors);
+  const remainder = groupsOfFour % numColors;
+  
+  // Create array with balanced color distribution
   const colors: Color[] = [];
-  for (let i = 0; i < colorsNeeded; i++) {
-    const color = COLORS[i % COLORS.length];
-    colors.push(color, color, color, color);
+  for (let i = 0; i < numColors; i++) {
+    const color = COLORS[i];
+    const groups = groupsPerColor + (i < remainder ? 1 : 0);
+    for (let j = 0; j < groups; j++) {
+      colors.push(color, color, color, color);
+    }
   }
   
   // Shuffle the colors
