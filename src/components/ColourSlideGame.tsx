@@ -59,22 +59,43 @@ function createRandomBoard(size: number): Board {
     colors.push(null);
   }
   
-  // Shuffle the colors
-  for (let i = colors.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [colors[i], colors[j]] = [colors[j], colors[i]];
-  }
+  // Keep shuffling until we get a board with no initial matches
+  let board: Board;
+  let attempts = 0;
+  const maxAttempts = 100;
   
-  // Create board
-  const board: Board = [];
-  let colorIndex = 0;
-  for (let row = 0; row < size; row++) {
-    const rowArray: Color[] = [];
-    for (let col = 0; col < size; col++) {
-      rowArray.push(colors[colorIndex++]);
+  do {
+    // Shuffle the colors
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colors[i], colors[j]] = [colors[j], colors[i]];
     }
-    board.push(rowArray);
-  }
+    
+    // Create board
+    board = [];
+    let colorIndex = 0;
+    for (let row = 0; row < size; row++) {
+      const rowArray: Color[] = [];
+      for (let col = 0; col < size; col++) {
+        rowArray.push(colors[colorIndex++]);
+      }
+      board.push(rowArray);
+    }
+    
+    attempts++;
+    
+    // Check if this board has any matches
+    const matches = checkMatches(board);
+    if (matches.length === 0) {
+      break; // Good board, no initial matches
+    }
+    
+    // Safety limit to prevent infinite loop
+    if (attempts >= maxAttempts) {
+      console.warn('Could not generate board without matches after', maxAttempts, 'attempts');
+      break;
+    }
+  } while (true);
   
   return board;
 }
