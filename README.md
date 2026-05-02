@@ -81,6 +81,7 @@ whatever. it's open source.
   - [ ] hokusai views of fuji
   - [ ] hal 9000
   - [ ] nostrich / zaps
+  - [ ] yee haw / yee yaw; rotating in 3d puzzle plane, maybe not rotating but flipping 180 degrees up down, or left right every x seconds
 - [ ] dm, private levels
 - [ ] level sound track?
 - [ ] browse others levels
