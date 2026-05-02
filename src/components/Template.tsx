@@ -26,7 +26,7 @@ export function Template({
         <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
           <Link
             to="/"
-            className="rounded-lg border-2 border-pink-500/60 bg-white/70 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-pink-700 shadow-[0_0_15px_rgba(236,72,153,0.25)] backdrop-blur transition-all hover:scale-110 hover:bg-white/90 hover:shadow-[0_0_25px_rgba(236,72,153,0.45)]"
+            className="rounded-lg border-2 border-cyan-500/60 bg-white/70 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-800 shadow-[0_0_15px_rgba(14,116,144,0.22)] backdrop-blur transition-all hover:scale-110 hover:bg-white/90 hover:shadow-[0_0_25px_rgba(14,116,144,0.4)]"
           >
             ← Exit
           </Link>
@@ -38,12 +38,12 @@ export function Template({
           <div className="mb-7 sm:mb-9">
             <BrandLogo size={brandSize} />
             {pageName ? (
-              <p className="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-purple-700/80 sm:text-sm">
+              <p className="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-slate-700/80 sm:text-sm">
                 — {pageName} —
               </p>
             ) : null}
             {subtitle ? (
-              <p className="mt-2 text-center text-sm font-semibold text-purple-900/70 sm:text-base">
+              <p className="mt-2 text-center text-sm font-semibold text-slate-900/70 sm:text-base">
                 {subtitle}
               </p>
             ) : null}

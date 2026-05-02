@@ -20,8 +20,8 @@ const COLORS = [
   '#3b82f6', // blue
   '#10b981', // green
   '#f59e0b', // amber
-  '#8b5cf6', // violet
-  '#ec4899', // pink
+  '#0ea5e9', // sky
+  '#84cc16', // lime
   '#06b6d4', // cyan
   '#f97316', // orange
 ];
@@ -507,7 +507,7 @@ export function ColourSlideGame() {
     <Card className="w-full max-w-4xl shadow-2xl">
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-700 to-cyan-500 bg-clip-text text-transparent">
             Color Slide
           </CardTitle>
           {isComplete && (
@@ -618,7 +618,7 @@ export function ColourSlideGame() {
                       isMatching && 'scale-125 animate-pulse shadow-lg',
                       isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
                       isDraggingThis ? 'transition-none' : 'transition-all duration-200',
-                      isDraggingRow && !isBlocked && 'ring-2 ring-purple-500 shadow-xl scale-105',
+                      isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 shadow-xl scale-105',
                       isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105'
                     )}
                     style={{

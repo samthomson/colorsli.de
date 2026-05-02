@@ -96,14 +96,14 @@
 .bubble-bg {
   background: linear-gradient(
     125deg,
-    #ffd1dc 0%,
+    #d7ecff 0%,
     #ffe5b4 14%,
     #fff5ba 28%,
     #c8f7c5 42%,
     #b2ebf2 56%,
-    #d1c4e9 70%,
-    #f8bbd0 84%,
-    #ffd1dc 100%
+    #d6e8ff 70%,
+    #bfe8ff 84%,
+    #d7ecff 100%
   );
   background-size: 400% 400%;
   animation:

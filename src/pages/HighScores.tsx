@@ -29,9 +29,9 @@ const HighScores = () => {
 
   return (
     <Template pageName="High Scores" subtitle="Top runs from Color Slide.">
-      <Card className="border-fuchsia-300/25 bg-black/30">
+      <Card className="border-cyan-300/25 bg-black/30">
         <CardHeader>
-          <CardTitle className="text-xl text-fuchsia-100 sm:text-2xl">Global Leaderboard</CardTitle>
+          <CardTitle className="text-xl text-cyan-100 sm:text-2xl">Global Leaderboard</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {highScores.map((entry) => (
@@ -46,7 +46,7 @@ const HighScores = () => {
                   Board {entry.board} • {entry.moves} moves
                 </p>
               </div>
-              <span className="text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</span>
+              <span className="text-sm font-black text-cyan-100">{entry.score.toLocaleString()}</span>
             </div>
           ))}
         </CardContent>
