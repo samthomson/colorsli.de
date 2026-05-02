@@ -8,6 +8,13 @@ import { cn } from '@/lib/utils';
 type Color = string | null;
 type Board = Color[][];
 
+/**
+ * LLM maintenance notes:
+ * - Core invariant: each non-null color count must stay divisible by 4.
+ * - Only exact runs of 4 clear; runs of 5+ are blocked and shown as warnings.
+ * - Fresh boards must not contain any 4+ run before player interaction.
+ * - Match resolution is deferred until drag release (never during drag movement).
+ */
 const COLORS = [
   '#ef4444', // red
   '#3b82f6', // blue
@@ -24,21 +31,14 @@ function createRandomBoard(size: number): Board {
   const groupsOfFour = Math.floor(totalCells / 4);
   const leftoverCells = totalCells % 4; // These will be pre-cleared
   
-  // Determine how many colors to use based on grid size
-  // Use more colors for larger grids to make it interesting
-  let numColors = COLORS.length;
-  
-  if (groupsOfFour <= 4) {
-    numColors = Math.min(2, COLORS.length); // Small grids: 2 colors
-  } else if (groupsOfFour <= 9) {
-    numColors = Math.min(3, COLORS.length); // 6x6: 3 colors
-  } else if (groupsOfFour <= 16) {
-    numColors = Math.min(4, COLORS.length); // 8x8: 4 colors
-  } else if (groupsOfFour <= 25) {
-    numColors = Math.min(5, COLORS.length); // 10x10: 5 colors
-  } else {
-    numColors = Math.min(6, COLORS.length); // 12x12+: 6 colors
-  }
+  // Determine how many colors to use based on grid size.
+  // Larger boards use more colors to keep puzzles interesting.
+  const numColors =
+    groupsOfFour <= 4 ? Math.min(2, COLORS.length) :
+    groupsOfFour <= 9 ? Math.min(3, COLORS.length) :
+    groupsOfFour <= 16 ? Math.min(4, COLORS.length) :
+    groupsOfFour <= 25 ? Math.min(5, COLORS.length) :
+    Math.min(6, COLORS.length);
   
   // Calculate how many groups of 4 per color
   const groupsPerColor = Math.floor(groupsOfFour / numColors);
@@ -59,7 +59,7 @@ function createRandomBoard(size: number): Board {
     masterColors.push(null);
   }
   
-  // Validation function to ensure color counts are correct
+  // Internal guard for invariant #1 (non-null colors in multiples of 4).
   const validateColorCounts = (arr: Color[]): boolean => {
     const counts = new Map<Color, number>();
     arr.forEach(color => {
@@ -82,11 +82,11 @@ function createRandomBoard(size: number): Board {
   }
   
   // Keep shuffling until we get a board with no initial matches
-  let board: Board;
+  let board: Board | undefined;
   let attempts = 0;
   const maxAttempts = 100;
   
-  do {
+  while (attempts < maxAttempts) {
     // Create a FRESH COPY of the master array for each shuffle attempt
     const colors = [...masterColors];
     
@@ -123,17 +123,15 @@ function createRandomBoard(size: number): Board {
       break; // Good board: no 4+ sequences and no blocked cells
     }
     
-    // Safety limit to prevent infinite loop
     if (attempts >= maxAttempts) {
       console.warn('Could not generate valid board after', maxAttempts, 'attempts. Using best attempt.');
-      break;
     }
-  } while (true);
+  }
   
-  return board;
+  return board ?? [];
 }
 
-// Check if board has any sequence of 4 or more in a row (for initial board validation)
+// Used only during generation to reject starting boards that already contain 4+ runs.
 function hasAnyFourInARow(board: Board): boolean {
   const size = board.length;
   
@@ -185,6 +183,8 @@ function checkMatches(board: Board): { row: number; col: number }[] {
   const size = board.length;
   const cleared = new Set<string>();
   
+  // Collect only exact 4-length runs that are not part of 5+ sequences.
+  // `cleared` avoids double-clearing when horizontal/vertical groups overlap.
   // Check horizontal matches - only exact groups of 4
   for (let row = 0; row < size; row++) {
     for (let col = 0; col <= size - 4; col++) {
@@ -264,6 +264,7 @@ function checkBlocked(board: Board): { row: number; col: number }[] {
   const blocked: { row: number; col: number }[] = [];
   const size = board.length;
   
+  // Mark all cells belonging to invalid 5+ runs for warning UI.
   // Check for horizontal sequences of 5+
   for (let row = 0; row < size; row++) {
     let currentColor: Color = null;
@@ -353,7 +354,7 @@ export function ColourSlideGame() {
     setBlocked(blockedCells);
   }, [board]);
 
-  // Only check for matches when explicitly triggered (on mouse up)
+  // Hard rule: matching/clearing is triggered only from drag release.
   useEffect(() => {
     if (!shouldCheckMatches) return;
     
@@ -407,6 +408,8 @@ export function ColourSlideGame() {
     
     let newDragging = { ...dragging, offsetX, offsetY };
     
+    // Drag begins "undecided" so tiny jitters do not lock row/col prematurely.
+    // First meaningful movement determines whether we slide a row or a column.
     // Determine direction if undecided
     if (dragging.type === 'undecided') {
       const absX = Math.abs(offsetX);
@@ -440,6 +443,7 @@ export function ColourSlideGame() {
       rect.width / gridSize : 
       rect.height / gridSize;
     
+    // 70% threshold keeps dragging tactile while preventing accidental shifts.
     // Threshold for snapping to next position (70% of cell size for "sticky" feel)
     const threshold = cellSize * 0.7;
     
