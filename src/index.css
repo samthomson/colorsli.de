@@ -83,6 +83,34 @@
   }
 }
 
+@keyframes bubble-bg-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes bubble-bg-hue {
+  0% { filter: hue-rotate(0deg) saturate(1); }
+  100% { filter: hue-rotate(360deg) saturate(1); }
+}
+
+.bubble-bg {
+  background: linear-gradient(
+    125deg,
+    #ffd1dc 0%,
+    #ffe5b4 14%,
+    #fff5ba 28%,
+    #c8f7c5 42%,
+    #b2ebf2 56%,
+    #d1c4e9 70%,
+    #f8bbd0 84%,
+    #ffd1dc 100%
+  );
+  background-size: 400% 400%;
+  animation:
+    bubble-bg-shift 35s ease-in-out infinite,
+    bubble-bg-hue 90s linear infinite;
+}
+
 :root {
   --radius: 0.75rem;
 

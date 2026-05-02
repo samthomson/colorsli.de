@@ -1,5 +1,5 @@
 import { memo, useMemo, useRef } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 const SPHERE_COUNT = 9000;
@@ -98,26 +98,33 @@ const SPHERE_FRAGMENT = /* glsl */ `
 
   void main() {
     vec3 N = normalize(vNormalView);
-    vec3 L1 = normalize(vec3(0.4, 0.8, 0.6));
-    vec3 L2 = normalize(vec3(-0.6, -0.3, 0.5));
 
-    float d1 = max(dot(N, L1), 0.0);
-    float d2 = max(dot(N, L2), 0.0);
+    // Half-Lambert wraps light all the way around for a soft, non-harsh look.
+    vec3 L = normalize(vec3(0.3, 0.7, 0.6));
+    float ndl = dot(N, L);
+    float halfL = ndl * 0.5 + 0.5;
 
-    float shading = 0.65 + 0.45 * d1 + 0.25 * d2;
+    // Mostly ambient, very gentle directional.
+    float shading = 0.85 + 0.25 * halfL;
 
     float facing = max(N.z, 0.0);
     float fresnel = pow(1.0 - facing, 2.0);
-    float rim = pow(1.0 - facing, 5.0) * 2.0;
+
+    // Iridescent shimmer at glancing angles - soap film effect, not chrome.
+    vec3 iridescent = vec3(
+      0.5 + 0.5 * sin(facing * 7.0 + 0.0),
+      0.5 + 0.5 * sin(facing * 7.0 + 2.1),
+      0.5 + 0.5 * sin(facing * 7.0 + 4.2)
+    );
+
+    // Edge tint blends sphere color with iridescent shift, never pure white.
+    vec3 edge = mix(vColor, iridescent * 1.2 + vColor * 0.4, 0.5);
 
     vec3 base = vColor * shading;
-    vec3 highlight = vec3(1.0) * rim;
-    vec3 sheen = vColor * fresnel * 0.7;
+    vec3 finalColor = base + edge * fresnel * 0.6;
 
-    vec3 finalColor = base + highlight + sheen;
-
-    float alpha = 0.35 + 0.55 * fresnel + 0.25 * rim;
-    alpha = clamp(alpha, 0.3, 0.95);
+    // Bubble alpha: thin in middle, more opaque at edges (like soap film).
+    float alpha = 0.42 + 0.5 * fresnel;
 
     gl_FragColor = vec4(finalColor, alpha);
   }
@@ -184,7 +191,7 @@ function Spheres() {
       _dummy.updateMatrix();
       mesh.setMatrixAt(i, _dummy.matrix);
 
-      const flash = 1 + 0.3 * Math.sin(t * s.pulseSpeed * 0.6 + s.pulsePhase + 2);
+      const flash = 1 + 0.2 * Math.sin(t * s.pulseSpeed * 0.6 + s.pulsePhase + 2);
       _color.copy(s.color).multiplyScalar(flash);
       mesh.setColorAt(i, _color);
     }
@@ -205,93 +212,6 @@ function Spheres() {
   );
 }
 
-const BG_VERTEX = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = vec4(position.xy, 0.999, 1.0);
-  }
-`;
-
-const BG_FRAGMENT = /* glsl */ `
-  precision highp float;
-  varying vec2 vUv;
-  uniform float uTime;
-
-  vec3 hsl2rgb(float h, float s, float l) {
-    vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
-  }
-
-  void main() {
-    vec2 uv = vUv;
-
-    vec2 b1 = vec2(0.5 + 0.5*sin(uTime*0.13), 0.5 + 0.4*cos(uTime*0.17));
-    vec2 b2 = vec2(0.3 + 0.45*sin(uTime*0.21 + 1.7), 0.7 + 0.5*cos(uTime*0.11 + 2.3));
-    vec2 b3 = vec2(0.7 + 0.4*sin(uTime*0.19 + 3.2), 0.3 + 0.45*cos(uTime*0.23 + 0.8));
-    vec2 b4 = vec2(0.5 + 0.5*sin(uTime*0.27 + 4.1), 0.5 + 0.45*cos(uTime*0.15 + 1.2));
-    vec2 b5 = vec2(0.2 + 0.35*sin(uTime*0.33 + 2.0), 0.8 + 0.35*cos(uTime*0.18 + 3.7));
-    vec2 b6 = vec2(0.8 + 0.3*sin(uTime*0.29 + 0.5), 0.2 + 0.4*cos(uTime*0.25 + 4.4));
-
-    float w1 = 1.0 / (0.04 + length(uv - b1) * 2.2);
-    float w2 = 1.0 / (0.04 + length(uv - b2) * 2.2);
-    float w3 = 1.0 / (0.04 + length(uv - b3) * 2.2);
-    float w4 = 1.0 / (0.04 + length(uv - b4) * 2.2);
-    float w5 = 1.0 / (0.04 + length(uv - b5) * 2.2);
-    float w6 = 1.0 / (0.04 + length(uv - b6) * 2.2);
-
-    float hueOffset = uTime * 0.025;
-    vec3 c1 = hsl2rgb(hueOffset,         0.7, 0.82);
-    vec3 c2 = hsl2rgb(hueOffset + 0.16,  0.75, 0.8);
-    vec3 c3 = hsl2rgb(hueOffset + 0.33,  0.7, 0.83);
-    vec3 c4 = hsl2rgb(hueOffset + 0.5,   0.75, 0.81);
-    vec3 c5 = hsl2rgb(hueOffset + 0.66,  0.7, 0.84);
-    vec3 c6 = hsl2rgb(hueOffset + 0.83,  0.75, 0.82);
-
-    float wTotal = w1 + w2 + w3 + w4 + w5 + w6;
-    vec3 col = (c1*w1 + c2*w2 + c3*w3 + c4*w4 + c5*w5 + c6*w6) / wTotal;
-
-    // Lift the floor so no channel can ever go dark
-    col = max(col, vec3(0.65));
-
-    gl_FragColor = vec4(col, 1.0);
-  }
-`;
-
-function GradientBackground() {
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-  const { size } = useThree();
-
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uResolution: { value: new THREE.Vector2(size.width, size.height) },
-    }),
-    [size.width, size.height],
-  );
-
-  useFrame(({ clock }) => {
-    if (matRef.current) {
-      (matRef.current.uniforms.uTime as { value: number }).value = clock.getElapsedTime();
-    }
-  });
-
-  return (
-    <mesh frustumCulled={false} renderOrder={-1}>
-      <planeGeometry args={[2, 2]} />
-      <shaderMaterial
-        ref={matRef}
-        vertexShader={BG_VERTEX}
-        fragmentShader={BG_FRAGMENT}
-        uniforms={uniforms}
-        depthTest={false}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </mesh>
-  );
-}
-
 function CameraRig() {
   useFrame(({ camera, clock }) => {
     const t = clock.getElapsedTime() * 0.04;
@@ -306,12 +226,13 @@ function CameraRig() {
 export const CirclesBackground = memo(function CirclesBackground() {
   return (
     <div className="pointer-events-none absolute inset-0">
+      <div className="bubble-bg absolute inset-0" />
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 18], fov: 70, near: 0.1, far: 120 }}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => gl.setClearAlpha(0)}
       >
-        <GradientBackground />
         <CameraRig />
         <Spheres />
       </Canvas>
