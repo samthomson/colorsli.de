@@ -85,3 +85,5 @@ whatever. it's open source.
 - [ ] browse others levels
 - [ ] scoring
 - [ ] publish score / level completion
+- [ ] zap a level author
+- [ ] espy colour picker
