@@ -88,3 +88,4 @@ whatever. it's open source.
 - [ ] publish score / level completion
 - [ ] zap a level author
 - [ ] espy colour picker
+- [ ] funky favicon
