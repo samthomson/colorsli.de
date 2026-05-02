@@ -4,8 +4,8 @@ import { ColourSlideGame } from '@/components/ColourSlideGame';
 
 const Practice = () => {
   useSeoMeta({
-    title: 'Colour Slide - Practice',
-    description: 'Practice specific mechanics and improve your Colour Slide strategy.',
+    title: 'Color Slide - Practice',
+    description: 'Practice specific mechanics and improve your Color Slide strategy.',
   });
 
   return (

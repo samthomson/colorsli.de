@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Create = () => {
   useSeoMeta({
-    title: 'Colour Slide - Create',
-    description: 'Create and publish your own Colour Slide levels.',
+    title: 'Color Slide - Create',
+    description: 'Create and publish your own Color Slide levels.',
   });
 
   return (

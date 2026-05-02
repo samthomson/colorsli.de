@@ -6,6 +6,7 @@ import Play from "./pages/Play";
 import Discover from "./pages/Discover";
 import Practice from "./pages/Practice";
 import Create from "./pages/Create";
+import HighScores from "./pages/HighScores";
 import { NIP19Page } from "./pages/NIP19Page";
 import NotFound from "./pages/NotFound";
 
@@ -19,6 +20,7 @@ export function AppRouter() {
         <Route path="/discover" element={<Discover />} />
         <Route path="/practice" element={<Practice />} />
         <Route path="/create" element={<Create />} />
+        <Route path="/high-scores" element={<HighScores />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
         <Route path="/:nip19" element={<NIP19Page />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -508,7 +508,7 @@ export function ColourSlideGame() {
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Colour Slide
+            Color Slide
           </CardTitle>
           {isComplete && (
             <div className="flex items-center gap-2 text-green-600 dark:text-green-400">

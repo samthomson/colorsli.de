@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Discover = () => {
   useSeoMeta({
-    title: 'Colour Slide - Discover',
+    title: 'Color Slide - Discover',
     description: 'Browse featured boards, creators, and community challenges.',
   });
 

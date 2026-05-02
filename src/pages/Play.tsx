@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Play = () => {
   useSeoMeta({
-    title: 'Colour Slide - Play',
-    description: 'Play focused game modes and challenges in Colour Slide.',
+    title: 'Color Slide - Play',
+    description: 'Play focused game modes and challenges in Color Slide.',
   });
 
   return (
