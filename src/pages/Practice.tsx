@@ -1,6 +1,6 @@
 import { useSeoMeta } from '@unhead/react';
-import { AppShell } from '@/components/AppShell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Template } from '@/components/Template';
+import { ColourSlideGame } from '@/components/ColourSlideGame';
 
 const Practice = () => {
   useSeoMeta({
@@ -9,16 +9,11 @@ const Practice = () => {
   });
 
   return (
-    <AppShell title="Practice" subtitle="Train with focused drills and tutorials.">
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle>Practice mode scaffold</CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground">
-          Use this page for guided scenarios like exact-4 training, 5+ avoidance, and move-efficiency drills.
-        </CardContent>
-      </Card>
-    </AppShell>
+    <Template title="Practice" subtitle="Slide rows and columns to make exact groups of four.">
+      <div className="flex justify-center">
+        <ColourSlideGame />
+      </div>
+    </Template>
   );
 };
 

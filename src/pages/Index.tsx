@@ -1,6 +1,6 @@
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
-import { AppShell } from '@/components/AppShell';
+import { Template } from '@/components/Template';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -11,7 +11,7 @@ const Index = () => {
   });
 
   return (
-    <AppShell
+    <Template
       title="Colour Slide"
       subtitle="A puzzle game where you slide rows and columns to match exactly four colors."
     >
@@ -39,7 +39,7 @@ const Index = () => {
           </div>
         </CardContent>
       </Card>
-    </AppShell>
+    </Template>
   );
 };
 

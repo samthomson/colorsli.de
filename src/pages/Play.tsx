@@ -1,19 +1,24 @@
 import { useSeoMeta } from '@unhead/react';
-import { AppShell } from '@/components/AppShell';
-import { ColourSlideGame } from '@/components/ColourSlideGame';
+import { Template } from '@/components/Template';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Play = () => {
   useSeoMeta({
     title: 'Colour Slide - Play',
-    description: 'Play Colour Slide and clear the board by matching exactly four.',
+    description: 'Play focused game modes and challenges in Colour Slide.',
   });
 
   return (
-    <AppShell title="Play" subtitle="Slide rows and columns to make exact groups of four.">
-      <div className="flex justify-center">
-        <ColourSlideGame />
-      </div>
-    </AppShell>
+    <Template title="Play" subtitle="Choose a game mode and jump into a challenge.">
+      <Card className="border-dashed">
+        <CardHeader>
+          <CardTitle>Play mode scaffold</CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground">
+          Use this page for quick-play presets, daily challenges, and curated boards.
+        </CardContent>
+      </Card>
+    </Template>
   );
 };
 

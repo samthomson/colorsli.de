@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-type AppShellProps = {
+type TemplateProps = {
   title: string;
   subtitle?: string;
   children: ReactNode;
@@ -16,7 +16,7 @@ const navItems = [
   { to: '/create', label: 'Create' },
 ];
 
-export function AppShell({ title, subtitle, children }: AppShellProps) {
+export function Template({ title, subtitle, children }: TemplateProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-purple-950 dark:via-pink-950 dark:to-blue-950">
       <header className="border-b border-black/10 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-black/20">

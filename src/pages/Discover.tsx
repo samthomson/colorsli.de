@@ -1,5 +1,5 @@
 import { useSeoMeta } from '@unhead/react';
-import { AppShell } from '@/components/AppShell';
+import { Template } from '@/components/Template';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Discover = () => {
@@ -9,7 +9,7 @@ const Discover = () => {
   });
 
   return (
-    <AppShell title="Discover" subtitle="Find community levels, ideas, and challenges.">
+    <Template title="Discover" subtitle="Find community levels, ideas, and challenges.">
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle>Discover is coming next</CardTitle>
@@ -18,7 +18,7 @@ const Discover = () => {
           This page is ready as a template target for listing featured levels and recent community activity.
         </CardContent>
       </Card>
-    </AppShell>
+    </Template>
   );
 };
 
