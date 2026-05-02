@@ -12,11 +12,20 @@ export function BrandLogo({ variant = 'page', className }: BrandLogoProps) {
     <div className={cn('text-center', className)}>
       <h1
         className={cn(
-          'brand-arcade-title leading-none text-transparent bg-clip-text',
-          isHero ? 'text-[clamp(4.2rem,15vw,11rem)]' : 'text-[clamp(2.8rem,10vw,7.34rem)]',
+          'brand-arcade-title text-transparent bg-clip-text',
+          isHero
+            ? 'flex flex-col items-center leading-[0.9] text-[clamp(4.2rem,15vw,11rem)]'
+            : 'inline-block whitespace-nowrap leading-[0.95] text-[clamp(2.2rem,6.5vw,4.8rem)]',
         )}
       >
-        Color Slide
+        {isHero ? (
+          <>
+            <span className="block leading-[0.9]">Color</span>
+            <span className="-mt-[0.08em] block leading-[0.9]">Slide</span>
+          </>
+        ) : (
+          'Color Slide'
+        )}
       </h1>
       <p
         className={cn(
