@@ -80,6 +80,7 @@ whatever. it's open source.
   - [ ] moving boards
   - [ ] hokusai views of fuji
   - [ ] hal 9000
+  - [ ] nostrich / zaps
 - [ ] dm, private levels
 - [ ] level sound track?
 - [ ] browse others levels
