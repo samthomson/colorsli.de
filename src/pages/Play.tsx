@@ -9,7 +9,7 @@ const Play = () => {
   });
 
   return (
-    <Template title="Play" subtitle="Choose a game mode and jump into a challenge.">
+    <Template pageName="Play" subtitle="Choose a game mode and jump into a challenge.">
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle>Play mode scaffold</CardTitle>

@@ -9,7 +9,7 @@ const Create = () => {
   });
 
   return (
-    <Template title="Create" subtitle="Build your own levels and publishing workflow.">
+    <Template pageName="Create" subtitle="Build your own levels and publishing workflow.">
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle>Create mode scaffold</CardTitle>

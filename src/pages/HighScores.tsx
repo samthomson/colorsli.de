@@ -28,7 +28,7 @@ const HighScores = () => {
   });
 
   return (
-    <Template title="High Scores" subtitle="Top runs from Color Slide.">
+    <Template pageName="High Scores" subtitle="Top runs from Color Slide.">
       <Card className="border-fuchsia-300/25 bg-black/30">
         <CardHeader>
           <CardTitle className="text-xl text-fuchsia-100 sm:text-2xl">Global Leaderboard</CardTitle>

@@ -9,7 +9,7 @@ const Practice = () => {
   });
 
   return (
-    <Template title="Practice" subtitle="Slide rows and columns to make exact groups of four.">
+    <Template pageName="Practice" subtitle="Slide rows and columns to make exact groups of four.">
       <div className="flex justify-center">
         <ColourSlideGame />
       </div>

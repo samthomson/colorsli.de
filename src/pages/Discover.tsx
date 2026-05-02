@@ -9,7 +9,7 @@ const Discover = () => {
   });
 
   return (
-    <Template title="Discover" subtitle="Find community levels, ideas, and challenges.">
+    <Template pageName="Discover" subtitle="Find community levels, ideas, and challenges.">
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle>Discover is coming next</CardTitle>
