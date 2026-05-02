@@ -1,8 +1,8 @@
-# Colour Slide
+# Color Slide
 
 A puzzle game where you slide rows and columns to match exactly 4 colors in a row. Built with React, TypeScript, and TailwindCSS.
 
-![Colour Slide Game](https://shakespeare.diy/badge.svg)
+![Color Slide Game](https://shakespeare.diy/badge.svg)
 
 ## 🎮 How to Play
 
@@ -26,7 +26,7 @@ These rules are enforced in the code and MUST be maintained:
 ```text
 src/
 ├── components/
-│   ├── ColourSlideGame.tsx      # Main game component
+│   ├── ...                      # Main game component
 │   ├── ui/                      # shadcn/ui components
 │   └── ...
 ├── pages/
@@ -74,9 +74,9 @@ whatever. it's open source.
 - [ ] level editor
 - [ ] Add color themes
 - [ ] Add sound effects
-- [ ] nice effects on teh circles, including when bursting, and noises
+- [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
 - [ ] level ideas
-  - [ ] 60s; colour changing
+  - [ ] 60s; color changing
   - [ ] moving boards
   - [ ] hokusai views of fuji
   - [ ] hal 9000
@@ -87,5 +87,7 @@ whatever. it's open source.
 - [ ] scoring
 - [ ] publish score / level completion
 - [ ] zap a level author
-- [ ] espy colour picker
+- [ ] espy color picker
 - [ ] funky favicon
+- [ ] eyes, which reveal other colors, until which they can't be cleared
+- [ ] color changing
