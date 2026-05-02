@@ -18,14 +18,8 @@ export function BrandLogo({ variant = 'page', className }: BrandLogoProps) {
             : 'inline-block whitespace-nowrap leading-[0.95] text-[clamp(2.2rem,6.5vw,4.8rem)]',
         )}
       >
-        {isHero ? (
-          <>
-            <span className="block leading-[0.9]">Color</span>
-            <span className="-mt-[0.08em] block leading-[0.9]">Slide</span>
-          </>
-        ) : (
-          'Color Slide'
-        )}
+        <span className="block leading-[0.9]">{isHero ? 'Color' : 'Color Slide'}</span>
+        <span className={cn('-mt-[0.08em] block leading-[0.9]', isHero ? '' : 'hidden')}>Slide</span>
       </h1>
       <p
         className={cn(
