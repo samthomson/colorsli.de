@@ -7,14 +7,14 @@ const BOUNDS = { x: 36, y: 28, z: 24 };
 const BOUNCE_DAMPING = 0.97;
 
 const PALETTE = [
-  '#ff3030', '#ff5050', '#ff7070',
-  '#ff8c00', '#ffa500', '#ffb84d',
-  '#ffd700', '#ffeb3b', '#fff44f',
-  '#7fff00', '#00ff7f', '#00ff00',
-  '#00ffd5', '#00e5ff', '#00bfff',
-  '#1e90ff', '#3060ff', '#5070ff',
-  '#3b82f6', '#60a5fa', '#22d3ee',
-  '#ffffff', '#e0fff0', '#e0f2ff',
+  '#ef4444', '#f43f5e', '#dc2626',
+  '#f97316', '#ea580c', '#fb923c',
+  '#f59e0b', '#eab308', '#facc15',
+  '#a3e635', '#84cc16', '#22c55e',
+  '#10b981', '#14b8a6', '#06b6d4',
+  '#22d3ee', '#0ea5e9', '#38bdf8',
+  '#3b82f6', '#2563eb', '#1d4ed8',
+  '#60a5fa', '#4ade80', '#fde047',
 ];
 
 type Sphere = {

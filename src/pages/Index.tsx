@@ -18,7 +18,7 @@ const Index = () => {
   });
 
   return (
-    <Template showExit={false} brandSize="lg">
+    <Template showExit={false} brandVariant="hero">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:gap-4">
         {homeLinks.map((item, index) => (
           <Link

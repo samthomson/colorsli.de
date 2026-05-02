@@ -9,6 +9,7 @@
     "test": "npm i --silent && tsc --noEmit && eslint && vitest run --reporter=dot --silent && vite build -l error && cp dist/index.html dist/404.html && echo 'All tests passed!'"
   },
   "dependencies": {
+    "@fontsource/bungee": "^5.2.7",
     "@nostrify/nostrify": "^0.52.0",
     "@nostrify/react": "^0.5.2",
     "@radix-ui/react-toast": "^1.2.1",

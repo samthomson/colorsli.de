@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource/bungee/400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -93,18 +94,70 @@
   100% { filter: hue-rotate(360deg) saturate(1); }
 }
 
-.bubble-bg {
-  background: linear-gradient(
-    125deg,
-    #d7ecff 0%,
-    #ffe5b4 14%,
-    #fff5ba 28%,
-    #c8f7c5 42%,
-    #b2ebf2 56%,
-    #d6e8ff 70%,
-    #bfe8ff 84%,
-    #d7ecff 100%
+@keyframes brand-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes brand-rock {
+  0%, 100% { transform: skewX(-3deg) scale(1); }
+  50% { transform: skewX(-1deg) scale(1.03); }
+}
+
+@keyframes brand-spectrum-boost {
+  0%, 100% { filter: saturate(1.15) contrast(1.05) brightness(1); }
+  50% { filter: saturate(1.35) contrast(1.16) brightness(1.05); }
+}
+
+.brand-arcade-title {
+  font-family: "Bungee", Impact, "Arial Black", "Franklin Gothic Heavy", sans-serif;
+  letter-spacing: 0.12em;
+  background-image: linear-gradient(
+    105deg,
+    #ef4444 0%,
+    #f97316 14%,
+    #facc15 28%,
+    #84cc16 42%,
+    #22d3ee 56%,
+    #3b82f6 72%,
+    #1d4ed8 86%,
+    #ef4444 100%
   );
+  background-size: 220% 220%;
+  -webkit-text-stroke: 2px rgba(8, 47, 73, 0.65);
+  text-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.35),
+    0 6px 0 rgba(30, 64, 175, 0.42),
+    0 14px 24px rgba(239, 68, 68, 0.28),
+    0 18px 30px rgba(34, 211, 238, 0.35);
+  animation:
+    brand-gradient-shift 5.6s ease-in-out infinite,
+    brand-rock 3.2s ease-in-out infinite,
+    brand-spectrum-boost 2.6s ease-in-out infinite;
+  will-change: transform, background-position, filter;
+}
+
+.brand-arcade-tagline {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75),
+    0 0 12px rgba(14, 165, 233, 0.25);
+}
+
+.bubble-bg {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(239, 68, 68, 0.38) 0%, rgba(239, 68, 68, 0) 34%),
+    radial-gradient(circle at 78% 30%, rgba(34, 211, 238, 0.35) 0%, rgba(34, 211, 238, 0) 36%),
+    radial-gradient(circle at 62% 78%, rgba(250, 204, 21, 0.28) 0%, rgba(250, 204, 21, 0) 32%),
+    linear-gradient(
+      122deg,
+      #111827 0%,
+      #7c2d12 16%,
+      #b45309 30%,
+      #166534 45%,
+      #0e7490 60%,
+      #1d4ed8 76%,
+      #111827 100%
+    );
   background-size: 400% 400%;
   animation:
     bubble-bg-shift 35s ease-in-out infinite,

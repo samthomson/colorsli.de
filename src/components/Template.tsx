@@ -8,7 +8,7 @@ type TemplateProps = {
   subtitle?: string;
   children: ReactNode;
   showExit?: boolean;
-  brandSize?: 'lg' | 'md';
+  brandVariant?: 'hero' | 'page';
 };
 
 export function Template({
@@ -16,7 +16,7 @@ export function Template({
   subtitle,
   children,
   showExit = true,
-  brandSize = 'md',
+  brandVariant = 'page',
 }: TemplateProps) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fff5e6] text-[#2a1050]">
@@ -36,7 +36,7 @@ export function Template({
       <main className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
         <div className="rounded-3xl border-2 border-white/70 bg-white/35 p-4 shadow-[0_8px_40px_rgba(120,60,200,0.18)] backdrop-blur-lg sm:p-6">
           <div className="mb-7 sm:mb-9">
-            <BrandLogo size={brandSize} />
+            <BrandLogo variant={brandVariant} />
             {pageName ? (
               <p className="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-slate-700/80 sm:text-sm">
                 — {pageName} —
