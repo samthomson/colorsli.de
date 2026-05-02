@@ -91,3 +91,4 @@ whatever. it's open source.
 - [ ] funky favicon
 - [ ] eyes, which reveal other colors, until which they can't be cleared
 - [ ] color changing
+- [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
