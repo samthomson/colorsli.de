@@ -1,16 +1,45 @@
 import { useSeoMeta } from '@unhead/react';
-import { ColourSlideGame } from '@/components/ColourSlideGame';
+import { Link } from 'react-router-dom';
+import { AppShell } from '@/components/AppShell';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   useSeoMeta({
-    title: 'Colour Slide - Puzzle Game',
-    description: 'Match colors by sliding rows and columns in this addictive puzzle game.',
+    title: 'Colour Slide - Home',
+    description: 'Choose how you want to play Colour Slide.',
   });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-purple-950 dark:via-pink-950 dark:to-blue-950 p-4">
-      <ColourSlideGame />
-    </div>
+    <AppShell
+      title="Colour Slide"
+      subtitle="A puzzle game where you slide rows and columns to match exactly four colors."
+    >
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Start here</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            Use this as your main navigation hub while you expand the game modes.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/play">Play</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/discover">Discover</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/practice">Practice</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/create">Create</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </AppShell>
   );
 };
 
