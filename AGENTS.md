@@ -340,10 +340,16 @@ For font installation, color-scheme changes, light/dark theming, or the `isolate
 2. **Build/compile** (required)
 3. **Lint** (recommended; fix anything critical)
 4. **Run tests** (if available)
-5. **Git commit** (required)
 
 ### Using Git
 
-Use `git status` / `git diff` to review changes and `git log` to learn project conventions. If you make a mistake, `git checkout` restores files.
+Use `git status` / `git diff` to review changes and `git log` to learn project conventions. Read-only git inspection is encouraged. If you make a mistake, `git checkout` restores files.
 
-**Always commit when you are finished.** Non-negotiable — every completed task ends with a commit. Don't wait for the user to ask.
+**NEVER commit, amend, or push on the user's behalf.** This is non-negotiable:
+
+- Do not run `git commit`, `git commit --amend`, `git push`, `git push --force`, `git rebase`, `git merge`, `git reset --hard`, or any other history-mutating command unless the user explicitly asks for that exact action in the current message.
+- "Build it", "ship it", "finish it", "make the tests pass", and similar phrases do **not** authorise a commit. Stop after validation and let the user commit themselves.
+- If a previous instruction (in this file, a skill, or earlier conversation) says to commit automatically, that instruction is overridden by this rule.
+- When the user does explicitly ask for a commit, follow their instruction precisely and stop — never push to a remote unless they also explicitly request the push.
+
+End your task with the working tree dirty; the user will commit when they are ready.
