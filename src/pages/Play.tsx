@@ -27,15 +27,14 @@ const Play = () => {
 
 function PlayContent() {
   const officialLevels = useOfficialLevels();
-  const { completedIds, isLoading: saveLoading } = useCompletedLevels();
-  // Track the active level by id; deriving the level object from the live
-  // list means we never need a setState-in-effect to recover when the list
-  // changes (e.g. after a refresh).
-  const [activeLevelId, setActiveLevelId] = useState<string | null>(null);
+  const { completedCoordinates, isLoading: saveLoading } = useCompletedLevels();
+  // Track the active level by addressable coordinate (stable across edits);
+  // deriving the level object from the live list avoids any setState-in-effect.
+  const [activeCoordinate, setActiveCoordinate] = useState<string | null>(null);
 
   const levels = officialLevels.data?.levels ?? [];
-  const activeLevel: ParsedLevel | null = activeLevelId
-    ? levels.find((l) => l.id === activeLevelId) ?? null
+  const activeLevel: ParsedLevel | null = activeCoordinate
+    ? levels.find((l) => l.coordinate === activeCoordinate) ?? null
     : null;
 
   if (officialLevels.isLoading || saveLoading) {
@@ -53,14 +52,14 @@ function PlayContent() {
   }
 
   if (activeLevel) {
-    const idx = levels.findIndex(l => l.id === activeLevel.id);
+    const idx = levels.findIndex(l => l.coordinate === activeLevel.coordinate);
     const next = idx >= 0 && idx + 1 < levels.length ? levels[idx + 1] : null;
     return (
       <LevelPlayer
         level={activeLevel}
         nextLevel={next}
-        onBack={() => setActiveLevelId(null)}
-        onAdvance={(n) => setActiveLevelId(n.id)}
+        onBack={() => setActiveCoordinate(null)}
+        onAdvance={(n) => setActiveCoordinate(n.coordinate)}
       />
     );
   }
@@ -82,8 +81,8 @@ function PlayContent() {
   return (
     <LevelGrid
       levels={levels}
-      completedIds={completedIds}
-      onSelect={(level) => setActiveLevelId(level.id)}
+      completedCoordinates={completedCoordinates}
+      onSelect={(level) => setActiveCoordinate(level.coordinate)}
     />
   );
 }

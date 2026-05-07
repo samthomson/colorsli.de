@@ -11,9 +11,21 @@
  */
 
 export const KINDS = {
-  /** Immutable level definition published by any user. */
-  LEVEL: 7283,
-  /** Replaceable list of level event ids that make up the official progression. */
+  /**
+   * Addressable level definition published by any user.
+   *
+   * Identified by the (kind, pubkey, d) coordinate — the d-tag is a stable
+   * random slug picked when the level is first created. Republishing with
+   * the same d-tag *replaces* the prior version (NIP-01 addressable
+   * semantics), so authors can edit their own published levels.
+   *
+   * Other Color Slide events that "point at a level" (completions, save
+   * game, official list) reference the coordinate (`37283:pubkey:d`) via
+   * `a` tags / coordinate strings — never the event id — so they survive
+   * level edits.
+   */
+  LEVEL: 37283,
+  /** Replaceable list of `a` coordinates that make up the official progression. */
   OFFICIAL_LIST: 30888,
   /** Standard text note used as a public completion / leaderboard entry. */
   COMPLETION: 1,

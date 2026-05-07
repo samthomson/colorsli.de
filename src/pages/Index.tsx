@@ -1,14 +1,20 @@
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
 import { Template } from '@/components/Template';
-import { cn } from '@/lib/utils';
+import { ArcadePill, type ArcadePillTone } from '@/components/ArcadePill';
 
-const homeLinks = [
-  { to: '/practice', label: 'Practice', glow: 'hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] hover:border-cyan-300' },
-  { to: '/play', label: 'Play', glow: 'hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:border-blue-300' },
-  { to: '/high-scores', label: 'High Scores', glow: 'hover:shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:border-yellow-300' },
-  { to: '/discover', label: 'Discover', glow: 'hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] hover:border-emerald-300' },
-  { to: '/create', label: 'Create', glow: 'hover:shadow-[0_0_30px_rgba(14,165,233,0.5)] hover:border-sky-300' },
+/**
+ * Home menu — a stack of ArcadePills, one tone each so the player can tell
+ * modes apart at a glance without reading. Sizing/colour live entirely on
+ * the shared button component (DRY) and the container is intentionally
+ * narrower than the COLOR SLIDE wordmark so the brand stays the hero.
+ */
+const homeLinks: Array<{ to: string; label: string; tone: ArcadePillTone }> = [
+  { to: '/practice', label: 'Practice', tone: 'cyan' },
+  { to: '/play', label: 'Play', tone: 'rainbow' },
+  { to: '/high-scores', label: 'High Scores', tone: 'amber' },
+  { to: '/discover', label: 'Discover', tone: 'emerald' },
+  { to: '/create', label: 'Create', tone: 'indigo' },
 ];
 
 const Index = () => {
@@ -19,21 +25,18 @@ const Index = () => {
 
   return (
     <Template showExit={false} brandVariant="hero">
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:gap-4">
-        {homeLinks.map((item, index) => (
-          <Link
+      <section className="mx-auto flex w-full max-w-xl flex-col gap-3 sm:gap-4">
+        {homeLinks.map((item) => (
+          <ArcadePill
             key={item.to}
-            to={item.to}
-            className={cn(
-              'w-full rounded-2xl border-2 border-white/70 bg-white/40 px-6 py-5 text-center text-4xl font-black uppercase tracking-[0.12em] text-slate-900 transition-all duration-300 backdrop-blur sm:text-5xl',
-              'hover:scale-[1.03] hover:-translate-y-0.5 hover:bg-white/70',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-              item.glow,
-              index % 2 === 0 ? 'hover:rotate-[0.5deg]' : 'hover:-rotate-[0.5deg]',
-            )}
+            asChild
+            tone={item.tone}
+            size="xl"
+            block
+            bob={false}
           >
-            {item.label}
-          </Link>
+            <Link to={item.to}>{item.label}</Link>
+          </ArcadePill>
         ))}
       </section>
     </Template>

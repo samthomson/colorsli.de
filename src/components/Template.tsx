@@ -48,12 +48,12 @@ export function Template({
           <div className="mb-7 sm:mb-9">
             <BrandLogo variant={brandVariant} />
             {pageName ? (
-              <p className="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-slate-700/80 sm:text-sm">
+              <p className="arcade-label mt-4 text-center text-[11px] text-slate-700/80 sm:text-xs">
                 — {pageName} —
               </p>
             ) : null}
             {subtitle ? (
-              <p className="mt-2 text-center text-sm font-semibold text-slate-900/70 sm:text-base">
+              <p className="arcade-label mt-2 text-center text-[10px] tracking-[0.18em] text-slate-900/70 sm:text-xs">
                 {subtitle}
               </p>
             ) : null}

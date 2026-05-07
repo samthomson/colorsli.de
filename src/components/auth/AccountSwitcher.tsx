@@ -24,6 +24,8 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
     return account.metadata.name ?? genUserName(account.pubkey);
   }
 
+  const displayName = getDisplayName(currentUser);
+
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
@@ -31,14 +33,17 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           tone="emerald"
           size="sm"
           bob={false}
-          aria-label={`Account: ${getDisplayName(currentUser)}`}
-          className="!gap-1.5 !p-1 !pr-2"
+          aria-label={`Account: ${displayName}`}
+          className="!gap-2 !py-1 !pl-1 !pr-3"
         >
           <Avatar className="h-7 w-7 ring-2 ring-white/90">
-            <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
-            <AvatarFallback>{getDisplayName(currentUser).charAt(0)}</AvatarFallback>
+            <AvatarImage src={currentUser.metadata.picture} alt={displayName} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
           </Avatar>
-          <ChevronDown className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]" />
+          <span className="max-w-[12ch] truncate sm:max-w-[18ch]">
+            {displayName}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]" />
         </ArcadePill>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-56 p-2 animate-scale-in'>

@@ -11,26 +11,27 @@ export type LevelLeaderboardEntry = {
 };
 
 /**
- * Top scores for one level (highest-first).
+ * Top scores for one level (highest-first), keyed by addressable
+ * coordinate so leaderboards survive level edits.
  *
  * Best score per pubkey only; ties broken by faster time, then fewer moves.
  * Trust caveat: anyone can publish a kind 1 with these tags. The board is a
  * "trust the network" leaderboard for v1; documented in NIP.md.
  */
-export function useLevelLeaderboard(levelEventId: string | undefined, limit = 100) {
+export function useLevelLeaderboard(levelCoordinate: string | undefined, limit = 100) {
   const { nostr } = useNostr();
 
   return useQuery<LevelLeaderboardEntry[]>({
-    queryKey: ['colorslide', 'leaderboard', 'level', levelEventId ?? ''],
-    enabled: Boolean(levelEventId),
+    queryKey: ['colorslide', 'leaderboard', 'level', levelCoordinate ?? ''],
+    enabled: Boolean(levelCoordinate),
     queryFn: async (c) => {
-      if (!levelEventId) return [];
+      if (!levelCoordinate) return [];
 
       const events = await nostr.query(
         [{
           kinds: [KINDS.COMPLETION],
           '#t': [TAGS.COMPLETION],
-          '#e': [levelEventId],
+          '#a': [levelCoordinate],
           limit,
         }],
         { signal: c.signal },

@@ -46,7 +46,7 @@ const defaultConfig: AppConfig = {
 // Bump this key whenever the shape or default of AppConfig changes in a way
 // that should invalidate any stored client copies (e.g. flipping the dev
 // relay set, schema changes). See AGENTS.md "No migrations" rule.
-const APP_CONFIG_STORAGE_KEY = "nostr:app-config:v4";
+const APP_CONFIG_STORAGE_KEY = "nostr:app-config:v5";
 
 export function App() {
   return (

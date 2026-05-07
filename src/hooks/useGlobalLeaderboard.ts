@@ -11,10 +11,10 @@ export type GlobalLeaderboardEntry = {
 };
 
 /**
- * Aggregate leaderboard across all levels.
+ * Aggregate leaderboard across all levels, grouped by addressable coordinate.
  *
- * For each (pubkey, level) we keep the player's best score; the per-pubkey
- * best scores are then summed and sorted desc.
+ * For each (pubkey, levelCoordinate) we keep the player's best score; the
+ * per-pubkey best scores are then summed and sorted desc.
  */
 export function useGlobalLeaderboard(limit = 1000) {
   const { nostr } = useNostr();
@@ -31,12 +31,12 @@ export function useGlobalLeaderboard(limit = 1000) {
         { signal: c.signal },
       );
 
-      // pubkey -> levelEventId -> best score
+      // pubkey -> levelCoordinate -> best score
       const bestPerPlayerLevel = new Map<string, Map<string, number>>();
 
       for (const ev of events) {
-        const levelId = ev.tags.find(t => t[0] === 'e' && typeof t[1] === 'string')?.[1];
-        if (!levelId) continue;
+        const coord = ev.tags.find(t => t[0] === 'a' && typeof t[1] === 'string')?.[1];
+        if (!coord) continue;
         const score = Number(ev.tags.find(t => t[0] === 'score')?.[1] ?? '0');
         if (!Number.isFinite(score)) continue;
 
@@ -45,8 +45,8 @@ export function useGlobalLeaderboard(limit = 1000) {
           perLevel = new Map();
           bestPerPlayerLevel.set(ev.pubkey, perLevel);
         }
-        const existing = perLevel.get(levelId) ?? -Infinity;
-        if (score > existing) perLevel.set(levelId, score);
+        const existing = perLevel.get(coord) ?? -Infinity;
+        if (score > existing) perLevel.set(coord, score);
       }
 
       const totals: GlobalLeaderboardEntry[] = [];

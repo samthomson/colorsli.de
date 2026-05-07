@@ -1,12 +1,19 @@
 /**
- * Encode/decode helpers for kind 7283 Color Slide level events.
+ * Encode/decode helpers for Color Slide level events (kind 37283,
+ * **addressable**).
  *
- * The level board is stored as JSON in `content`; descriptive metadata
- * (title, dims, app/level filter tags) lives in `tags` so relays can index it.
+ * Each level has a stable random `d` tag chosen at first publish. The
+ * `(kind, pubkey, d)` triple — exposed as `ParsedLevel.coordinate` — is the
+ * only stable identifier across edits. Republishing with the same d-tag
+ * replaces the prior version on the relay.
+ *
+ * The board layout is stored as JSON in `content`; metadata (title, dims,
+ * filter tags) lives in `tags` so relays can index it.
  */
 import type { NostrEvent } from '@nostrify/nostrify';
 import { GAME_URL, KINDS, TAGS } from '@/lib/constants';
 import type { Board } from '@/lib/colorSlide';
+import { buildLevelCoordinate, newLevelDTag } from '@/lib/coordinate';
 
 export type LevelEventTemplate = {
   kind: typeof KINDS.LEVEL;
@@ -16,8 +23,12 @@ export type LevelEventTemplate = {
 };
 
 export type ParsedLevel = {
-  /** Underlying Nostr event id (also the immutable level id). */
+  /** Underlying Nostr event id of *this revision*. Changes on every edit. */
   id: string;
+  /** Stable coordinate `kind:pubkey:d`. The thing to reference everywhere. */
+  coordinate: string;
+  /** d-tag (the editable level's permanent slug for this author). */
+  dTag: string;
   /** Author hex pubkey. */
   pubkey: string;
   /** Display title. */
@@ -34,13 +45,19 @@ export type ParsedLevel = {
   event: NostrEvent;
 };
 
-/** Build the event template that `useNostrPublish` will sign and publish. */
+/** Build the event template that `useNostrPublish` will sign and publish.
+ *
+ * Pass `existingDTag` to reuse a prior level's d-tag — that turns the
+ * publish into a replacement (edit) of the previous revision. Omit it to
+ * create a brand-new level (a fresh random d-tag is generated).
+ */
 export function buildLevelTemplate(args: {
   title: string;
   board: Board;
   youtubeUrl?: string;
+  existingDTag?: string;
 }): LevelEventTemplate {
-  const { title, board, youtubeUrl } = args;
+  const { title, board, youtubeUrl, existingDTag } = args;
   const rows = board.length;
   const cols = rows > 0 ? board[0].length : 0;
 
@@ -49,7 +66,10 @@ export function buildLevelTemplate(args: {
     throw new Error('Level title is required.');
   }
 
+  const dTag = existingDTag ?? newLevelDTag();
+
   const tags: string[][] = [
+    ['d', dTag],
     ['t', TAGS.APP],
     ['t', TAGS.LEVEL],
     ['title', trimmedTitle],
@@ -70,9 +90,14 @@ export function buildLevelTemplate(args: {
   };
 }
 
-/** Parse a kind 7283 event into a ParsedLevel; returns null if malformed. */
+/** Parse a kind 37283 event into a ParsedLevel; returns null if malformed
+ * or missing the required `d` tag (which is non-negotiable for addressable
+ * events). */
 export function parseLevelEvent(event: NostrEvent): ParsedLevel | null {
   if (event.kind !== KINDS.LEVEL) return null;
+
+  const dTag = event.tags.find(([n]) => n === 'd')?.[1]?.trim();
+  if (!dTag) return null;
 
   let parsed: unknown;
   try {
@@ -83,7 +108,6 @@ export function parseLevelEvent(event: NostrEvent): ParsedLevel | null {
   if (!parsed || typeof parsed !== 'object') return null;
   const board = (parsed as { board?: unknown }).board;
   if (!Array.isArray(board)) return null;
-  // Light shape check: 2D array of strings or null.
   for (const row of board) {
     if (!Array.isArray(row)) return null;
     for (const cell of row) {
@@ -98,6 +122,8 @@ export function parseLevelEvent(event: NostrEvent): ParsedLevel | null {
 
   return {
     id: event.id,
+    coordinate: buildLevelCoordinate(event.pubkey, dTag),
+    dTag,
     pubkey: event.pubkey,
     title,
     board: board as Board,

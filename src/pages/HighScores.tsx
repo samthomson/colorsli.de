@@ -27,8 +27,8 @@ const HighScores = () => {
     <Template pageName="High Scores" subtitle="Top runs from across Nostr.">
       <Tabs defaultValue="global" className="w-full">
         <TabsList className="grid w-full max-w-sm grid-cols-2">
-          <TabsTrigger value="global">Global</TabsTrigger>
-          <TabsTrigger value="per-level">Per Level</TabsTrigger>
+          <TabsTrigger value="global" className="arcade-label text-[11px]">Global</TabsTrigger>
+          <TabsTrigger value="per-level" className="arcade-label text-[11px]">Per Level</TabsTrigger>
         </TabsList>
         <TabsContent value="global" className="mt-4">
           <GlobalBoard />
@@ -47,8 +47,10 @@ function GlobalBoard() {
   return (
     <Card className="border-cyan-300/40 bg-white/70 backdrop-blur">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-slate-900">Global leaderboard</CardTitle>
-        <p className="text-xs text-slate-600">
+        <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-2xl leading-none sm:text-3xl">
+          Global leaderboard
+        </CardTitle>
+        <p className="arcade-label mt-2 text-[10px] tracking-[0.18em] text-slate-600">
           Sum of each player's best score on every level they have completed.
         </p>
       </CardHeader>
@@ -74,14 +76,21 @@ function GlobalRow({ rank, entry }: { rank: number; entry: GlobalLeaderboardEntr
 
   return (
     <div className="grid grid-cols-[auto,1fr,auto] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/60 px-3 py-2.5">
-      <span className={cn('w-9 text-center text-sm font-black', rankColor(rank))}>#{rank}</span>
+      <span className={cn('arcade-label w-9 text-center text-sm', rankColor(rank))}>#{rank}</span>
       <div className="min-w-0">
-        <Link to={`/${npub}`} className="truncate text-sm font-semibold text-slate-900 hover:text-cyan-700">
+        <Link
+          to={`/${npub}`}
+          className="arcade-label truncate text-xs text-slate-900 hover:text-cyan-700"
+        >
           {name}
         </Link>
-        <p className="text-xs text-slate-500">{entry.levelsCompleted} level{entry.levelsCompleted === 1 ? '' : 's'}</p>
+        <p className="arcade-label mt-0.5 text-[9px] text-slate-500">
+          {entry.levelsCompleted} level{entry.levelsCompleted === 1 ? '' : 's'}
+        </p>
       </div>
-      <span className="text-sm font-black text-cyan-700">{entry.totalScore.toLocaleString()}</span>
+      <span className="arcade-label text-sm tabular-nums text-cyan-700">
+        {entry.totalScore.toLocaleString()}
+      </span>
     </div>
   );
 }
@@ -92,14 +101,14 @@ function PerLevelBoard() {
 
   const allLevels: ParsedLevel[] = useMemo(() => {
     const official = officialQuery.data?.levels ?? [];
-    const officialIds = new Set(officialQuery.data?.orderedIds ?? []);
-    const community = (userLevelsQuery.data ?? []).filter((l) => !officialIds.has(l.id));
+    const officialCoords = new Set(officialQuery.data?.orderedCoordinates ?? []);
+    const community = (userLevelsQuery.data ?? []).filter((l) => !officialCoords.has(l.coordinate));
     return [...official, ...community];
   }, [officialQuery.data, userLevelsQuery.data]);
 
   // Derived selection: defaults to the first level until the user picks one.
-  const [selectedId, setSelectedId] = useState<string | undefined>();
-  const effectiveId = selectedId ?? allLevels[0]?.id;
+  const [selectedCoord, setSelectedCoord] = useState<string | undefined>();
+  const effectiveCoord = selectedCoord ?? allLevels[0]?.coordinate;
 
   const isLoading = officialQuery.isLoading || userLevelsQuery.isLoading;
 
@@ -118,14 +127,16 @@ function PerLevelBoard() {
   return (
     <Card className="border-cyan-300/40 bg-white/70 backdrop-blur">
       <CardHeader className="space-y-3">
-        <CardTitle className="text-xl font-bold text-slate-900">Per-level leaderboard</CardTitle>
-        <Select value={effectiveId} onValueChange={setSelectedId}>
-          <SelectTrigger className="w-full max-w-md">
+        <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-2xl leading-none sm:text-3xl">
+          Per-level leaderboard
+        </CardTitle>
+        <Select value={effectiveCoord} onValueChange={setSelectedCoord}>
+          <SelectTrigger className="arcade-label w-full max-w-md text-xs">
             <SelectValue placeholder="Choose a level" />
           </SelectTrigger>
           <SelectContent>
             {allLevels.map((level) => (
-              <SelectItem key={level.id} value={level.id}>
+              <SelectItem key={level.coordinate} value={level.coordinate} className="arcade-label text-xs">
                 {level.title} ({level.rows}x{level.cols})
               </SelectItem>
             ))}
@@ -133,14 +144,14 @@ function PerLevelBoard() {
         </Select>
       </CardHeader>
       <CardContent className="space-y-2">
-        <LevelBoard levelId={effectiveId} />
+        <LevelBoard levelCoordinate={effectiveCoord} />
       </CardContent>
     </Card>
   );
 }
 
-function LevelBoard({ levelId }: { levelId: string | undefined }) {
-  const { data, isLoading } = useLevelLeaderboard(levelId);
+function LevelBoard({ levelCoordinate }: { levelCoordinate: string | undefined }) {
+  const { data, isLoading } = useLevelLeaderboard(levelCoordinate);
 
   if (isLoading) return <BoardSkeleton />;
   if (!data || data.length === 0) return <EmptyRow message="No completions yet for this level." />;
@@ -161,23 +172,28 @@ function LevelRow({ rank, entry }: { rank: number; entry: LevelLeaderboardEntry 
 
   return (
     <div className="grid grid-cols-[auto,1fr,auto] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/60 px-3 py-2.5">
-      <span className={cn('w-9 text-center text-sm font-black', rankColor(rank))}>#{rank}</span>
+      <span className={cn('arcade-label w-9 text-center text-sm', rankColor(rank))}>#{rank}</span>
       <div className="min-w-0">
-        <Link to={`/${npub}`} className="truncate text-sm font-semibold text-slate-900 hover:text-cyan-700">
+        <Link
+          to={`/${npub}`}
+          className="arcade-label truncate text-xs text-slate-900 hover:text-cyan-700"
+        >
           {name}
         </Link>
-        <p className="text-xs text-slate-500">
+        <p className="arcade-label mt-0.5 text-[9px] text-slate-500">
           {formatTime(entry.seconds)} · {entry.moves} moves
         </p>
       </div>
-      <span className="text-sm font-black text-cyan-700">{entry.score.toLocaleString()}</span>
+      <span className="arcade-label text-sm tabular-nums text-cyan-700">
+        {entry.score.toLocaleString()}
+      </span>
     </div>
   );
 }
 
 function EmptyRow({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white/40 px-3 py-8 text-center text-sm text-slate-600">
+    <div className="arcade-label rounded-xl border border-dashed border-slate-300 bg-white/40 px-3 py-8 text-center text-[11px] text-slate-600">
       {message}
     </div>
   );

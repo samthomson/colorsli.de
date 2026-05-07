@@ -45,11 +45,19 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
     true,
   );
 
+  // Press-Start splash gate. Held here so the music toggle in the header
+  // can be hidden until the player has actually launched the level
+  // (showing it pre-start looks weird — there's nothing to toggle yet).
+  const [started, setStarted] = useState(false);
+
   const runSave = useCallback(
     async (r: CompletionResult) => {
       setSaveStatus('pending');
       try {
-        await updateSaveGame({ levelEventId: level.id, levelTitle: level.title });
+        await updateSaveGame({
+          levelCoordinate: level.coordinate,
+          levelTitle: level.title,
+        });
         setSaveStatus('success');
       } catch (err) {
         console.error('save game write failed', err);
@@ -57,7 +65,7 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
       }
       void r;
     },
-    [updateSaveGame, level.id, level.title],
+    [updateSaveGame, level.coordinate, level.title],
   );
 
   // Fire-and-forget public publish — only invoked when the user commits via
@@ -67,7 +75,7 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
     (r: CompletionResult) => {
       if (!config.publishCompletions) return;
       void publishCompletion({
-        levelEventId: level.id,
+        levelCoordinate: level.coordinate,
         levelTitle: level.title,
         score: r.score,
         seconds: r.seconds,
@@ -76,7 +84,7 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
         console.error('completion publish failed', err);
       });
     },
-    [config.publishCompletions, publishCompletion, level.id, level.title],
+    [config.publishCompletions, publishCompletion, level.coordinate, level.title],
   );
 
   const handleComplete = useCallback(
@@ -110,27 +118,35 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
   return (
     <div className="relative flex flex-col items-center gap-6">
       <div className="flex w-full flex-wrap items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="arcade-label gap-1 text-[10px]"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to levels
         </Button>
-        {level.youtubeUrl && (
+        {level.youtubeUrl && started && (
           <MusicToggle unmuted={musicUnmuted} onChange={setMusicUnmuted} />
         )}
       </div>
 
       <ColourSlideGame
-        key={level.id}
+        key={level.coordinate}
         initialBoard={level.board}
         levelLabel={level.title}
         onComplete={handleComplete}
+        started={started}
       />
 
       <YouTubeBackground
-        key={`yt-${level.id}`}
+        key={`yt-${level.coordinate}`}
         url={level.youtubeUrl}
         unmuted={musicUnmuted}
         onUnmutedChange={setMusicUnmuted}
+        started={started}
+        onStartedChange={setStarted}
       />
 
       {result && (

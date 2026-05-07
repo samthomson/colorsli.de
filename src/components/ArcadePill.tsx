@@ -75,6 +75,26 @@ const TONE_STYLES = {
       'active:shadow-[0_2px_0_rgba(15,23,42,0.45),0_0_15px_rgba(148,163,184,0.6)]',
     iconCircle: 'bg-white/95 text-slate-700',
   },
+  red: {
+    surface: 'bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 text-white',
+    shadow:
+      'shadow-[0_4px_0_rgba(127,29,29,0.5),0_0_22px_rgba(239,68,68,0.55)]',
+    hoverShadow:
+      'hover:shadow-[0_5px_0_rgba(127,29,29,0.55),0_0_34px_rgba(239,68,68,0.85)]',
+    activeShadow:
+      'active:shadow-[0_2px_0_rgba(127,29,29,0.5),0_0_18px_rgba(239,68,68,0.65)]',
+    iconCircle: 'bg-white/95 text-red-700',
+  },
+  indigo: {
+    surface: 'bg-gradient-to-br from-sky-500 via-indigo-600 to-blue-800 text-white',
+    shadow:
+      'shadow-[0_4px_0_rgba(30,27,75,0.55),0_0_22px_rgba(99,102,241,0.6)]',
+    hoverShadow:
+      'hover:shadow-[0_5px_0_rgba(30,27,75,0.6),0_0_34px_rgba(99,102,241,0.9)]',
+    activeShadow:
+      'active:shadow-[0_2px_0_rgba(30,27,75,0.55),0_0_18px_rgba(99,102,241,0.7)]',
+    iconCircle: 'bg-white/95 text-indigo-700',
+  },
   rainbow: {
     surface:
       'text-white [background-image:linear-gradient(105deg,#ef4444_0%,#f97316_18%,#facc15_34%,#22c55e_50%,#22d3ee_66%,#3b82f6_82%,#ef4444_100%)] [background-size:220%_220%]',
@@ -118,6 +138,11 @@ const SIZE_STYLES = {
     iconCircle: 'h-14 w-14 sm:h-16 sm:w-16',
     iconSvg: 'h-7 w-7 sm:h-8 sm:w-8',
   },
+  '2xl': {
+    pill: 'gap-5 border-4 px-12 py-6 text-3xl sm:text-5xl sm:border-[6px]',
+    iconCircle: 'h-16 w-16 sm:h-20 sm:w-20',
+    iconSvg: 'h-8 w-8 sm:h-10 sm:w-10',
+  },
 } as const satisfies Record<string, SizeStyle>;
 
 export type ArcadePillTone = keyof typeof TONE_STYLES;
@@ -128,13 +153,20 @@ export type ArcadePillProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: ArcadePillSize;
   /** Apply the gentle bob animation. Default true. */
   bob?: boolean;
+  /**
+   * Full-width / block layout. When true the pill stretches to fill its
+   * container (good for stacked menu items) and uses a more subtle hover
+   * lift instead of the default scale+rotate (which looks twitchy on a
+   * very wide button).
+   */
+  block?: boolean;
   /** When true, render as a Slot so the child element receives the styling. */
   asChild?: boolean;
 };
 
 export const ArcadePill = forwardRef<HTMLButtonElement, ArcadePillProps>(
   function ArcadePill(
-    { tone = 'cyan', size = 'sm', bob = true, asChild = false, className, ...rest },
+    { tone = 'cyan', size = 'sm', bob = true, block = false, asChild = false, className, ...rest },
     ref,
   ) {
     const Comp = asChild ? Slot.Root : 'button';
@@ -145,13 +177,16 @@ export const ArcadePill = forwardRef<HTMLButtonElement, ArcadePillProps>(
       <Comp
         ref={ref}
         className={cn(
-          'arcade-pill group inline-flex items-center justify-center rounded-full border-white/85 transition-all hover:scale-110 hover:-rotate-2 active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-60',
+          'arcade-pill group items-center justify-center rounded-full border-white/85 transition-all active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-60',
+          block
+            ? 'flex w-full hover:-translate-y-0.5 hover:scale-[1.02]'
+            : 'inline-flex hover:scale-110 hover:-rotate-2',
           t.surface,
           t.shadow,
           t.hoverShadow,
           t.activeShadow,
           s.pill,
-          bob && 'arcade-pill-bob',
+          bob && !block && 'arcade-pill-bob',
           className,
         )}
         {...rest}

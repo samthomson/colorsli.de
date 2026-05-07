@@ -1,33 +1,42 @@
 /**
  * Encrypted save-game schema (NIP-78 kind 30078, encrypted to self via NIP-44).
  *
- * Intentionally tiny: a flat list of cleared level event ids. The kind-1
- * completion events are still the source of truth for leaderboards / scores;
- * this file is only the player's private "which levels have I cleared" record,
- * used to drive sequential unlocking in `/practice`.
+ * Stores the addressable coordinates (`kind:pubkey:d`) of every level the
+ * player has cleared at least once. Coordinates (not event ids) are used
+ * because levels are addressable/editable — a coordinate stays stable
+ * across edits, so an unlock survives the level being republished.
+ *
+ * The kind-1 completion events remain the source of truth for any
+ * leaderboard / personal-best display; this file is purely the player's
+ * private "have I cleared X" record, used to drive sequential unlocking.
  */
 import { GAME_URL, KINDS, TAGS } from '@/lib/constants';
 
+/** Bumped from 1 -> 2 when we switched `completed` from event ids to
+ * coordinates. There is no migration: old v1 saves are silently treated as
+ * empty. (Pre-launch, no real users.) */
 export type SaveGame = {
-  version: 1;
-  /** Set of cleared level event ids (kind 7283 ids). Order does not matter. */
+  version: 2;
+  /** Set of cleared level coordinates (`kind:pubkey:d`). Order is irrelevant. */
   completed: string[];
 };
 
-export const EMPTY_SAVE_GAME: SaveGame = { version: 1, completed: [] };
+export const EMPTY_SAVE_GAME: SaveGame = { version: 2, completed: [] };
 
-/** Parse a decrypted save-game JSON string. Returns the empty save on any error. */
+/** Parse a decrypted save-game JSON string. Returns the empty save on any
+ * error or any version mismatch — explicit, no migration. */
 export function parseSaveGame(plaintext: string | undefined | null): SaveGame {
   if (!plaintext) return { ...EMPTY_SAVE_GAME };
   try {
     const parsed: unknown = JSON.parse(plaintext);
     if (!parsed || typeof parsed !== 'object') return { ...EMPTY_SAVE_GAME };
     const obj = parsed as Partial<SaveGame>;
+    if (obj.version !== 2) return { ...EMPTY_SAVE_GAME };
     if (!Array.isArray(obj.completed)) return { ...EMPTY_SAVE_GAME };
     const completed = obj.completed.filter(
       (v): v is string => typeof v === 'string' && v.length > 0,
     );
-    return { version: 1, completed };
+    return { version: 2, completed };
   } catch {
     return { ...EMPTY_SAVE_GAME };
   }
@@ -35,13 +44,13 @@ export function parseSaveGame(plaintext: string | undefined | null): SaveGame {
 
 /** Serialize for encryption. Stable shape, no timestamps. */
 export function serializeSaveGame(save: SaveGame): string {
-  return JSON.stringify({ version: 1, completed: save.completed });
+  return JSON.stringify({ version: 2, completed: save.completed });
 }
 
-/** Insert a level id (de-duped). Returns the same instance if no change. */
-export function withCompletion(save: SaveGame, levelEventId: string): SaveGame {
-  if (save.completed.includes(levelEventId)) return save;
-  return { version: 1, completed: [...save.completed, levelEventId] };
+/** Insert a coordinate (de-duped). Returns the same instance if no change. */
+export function withCompletion(save: SaveGame, levelCoordinate: string): SaveGame {
+  if (save.completed.includes(levelCoordinate)) return save;
+  return { version: 2, completed: [...save.completed, levelCoordinate] };
 }
 
 /**

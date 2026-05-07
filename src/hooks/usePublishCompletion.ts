@@ -5,8 +5,8 @@ import { GAME_URL, KINDS, TAGS } from '@/lib/constants';
 import { formatTime } from '@/lib/scoring';
 
 export type PublishCompletionArgs = {
-  /** Immutable level event id (kind 7283 event id). */
-  levelEventId: string;
+  /** Addressable level coordinate (`kind:pubkey:d`). Stable across edits. */
+  levelCoordinate: string;
   /** Display title of the level (used in the human summary). */
   levelTitle: string;
   /** Final score from `computeScore`. */
@@ -31,7 +31,7 @@ export function usePublishCompletion() {
 
   const publishCompletion = useCallback(
     async (args: PublishCompletionArgs) => {
-      const { levelEventId, levelTitle, score, seconds, moves } = args;
+      const { levelCoordinate, levelTitle, score, seconds, moves } = args;
       const summary =
         `Cleared "${levelTitle}" in Color Slide -> ${score} pts, ` +
         `${formatTime(seconds)}, ${moves} moves. Play at ${GAME_URL}`;
@@ -45,7 +45,7 @@ export function usePublishCompletion() {
             tags: [
               ['t', TAGS.APP],
               ['t', TAGS.COMPLETION],
-              ['e', levelEventId, '', 'level'],
+              ['a', levelCoordinate, '', 'level'],
               ['score', String(score)],
               ['time', String(seconds)],
               ['moves', String(moves)],

@@ -5,11 +5,15 @@ import { buildLevelTemplate } from '@/lib/levelEvent';
 import type { Board } from '@/lib/colorSlide';
 
 /**
- * Publishes a Color Slide level event (kind 7283) through the reliable
- * publish chokepoint, so failures land in the pending-events queue.
+ * Publishes a Color Slide level (kind 37283 addressable) through the
+ * reliable publish chokepoint, so failures land in the pending-events queue.
  *
- * Invalidates the community-levels query on success so a freshly published
- * level appears in Discover immediately rather than after the 60s staleTime.
+ * Pass `existingDTag` to *edit* an already-published level — it reuses the
+ * d-tag, which makes the publish a replacement of the previous revision.
+ * Omit it to create a brand-new level (a random d-tag is generated).
+ *
+ * Invalidates the levels caches on success so the change appears in Discover
+ * immediately rather than after the 60s staleTime.
  */
 export function usePublishLevel() {
   const reliablePublish = useReliablePublish();
@@ -17,12 +21,19 @@ export function usePublishLevel() {
   const [isPending, setIsPending] = useState(false);
 
   const publishLevel = useCallback(
-    async (args: { title: string; board: Board; youtubeUrl?: string }) => {
+    async (args: {
+      title: string;
+      board: Board;
+      youtubeUrl?: string;
+      existingDTag?: string;
+    }) => {
       const template = buildLevelTemplate(args);
       setIsPending(true);
       try {
         const event = await reliablePublish(template, {
-          description: `Publish level: ${args.title.trim()}`,
+          description: args.existingDTag
+            ? `Update level: ${args.title.trim()}`
+            : `Publish level: ${args.title.trim()}`,
         });
         await queryClient.invalidateQueries({ queryKey: ['colorslide', 'levels'] });
         return event;

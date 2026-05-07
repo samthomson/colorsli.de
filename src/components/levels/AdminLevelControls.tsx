@@ -4,7 +4,8 @@ import { useOfficialListActions } from '@/hooks/useOfficialListActions';
 import { useToast } from '@/hooks/useToast';
 
 type AdminLevelControlsProps = {
-  levelEventId: string;
+  /** Addressable coordinate of the level (`kind:pubkey:d`). */
+  levelCoordinate: string;
   /** Hide reorder buttons when not viewing the official list. */
   showReorder?: boolean;
 };
@@ -13,13 +14,13 @@ type AdminLevelControlsProps = {
  * Admin-only controls to add/remove/reorder a level in the official progression
  * list. Renders nothing if the current user is not an admin.
  */
-export function AdminLevelControls({ levelEventId, showReorder = false }: AdminLevelControlsProps) {
+export function AdminLevelControls({ levelCoordinate, showReorder = false }: AdminLevelControlsProps) {
   const { canEdit, isPending, isOfficial, addLevel, removeLevel, move } = useOfficialListActions();
   const { toast } = useToast();
 
   if (!canEdit) return null;
 
-  const inList = isOfficial(levelEventId);
+  const inList = isOfficial(levelCoordinate);
 
   const wrap = (label: string, fn: () => Promise<void>) => async () => {
     try {
@@ -45,7 +46,7 @@ export function AdminLevelControls({ levelEventId, showReorder = false }: AdminL
                 size="sm"
                 variant="outline"
                 disabled={isPending}
-                onClick={wrap('Moved up', () => move(levelEventId, 'up'))}
+                onClick={wrap('Moved up', () => move(levelCoordinate, 'up'))}
                 aria-label="Move up"
               >
                 <ArrowUp className="h-4 w-4" />
@@ -54,7 +55,7 @@ export function AdminLevelControls({ levelEventId, showReorder = false }: AdminL
                 size="sm"
                 variant="outline"
                 disabled={isPending}
-                onClick={wrap('Moved down', () => move(levelEventId, 'down'))}
+                onClick={wrap('Moved down', () => move(levelCoordinate, 'down'))}
                 aria-label="Move down"
               >
                 <ArrowDown className="h-4 w-4" />
@@ -65,7 +66,7 @@ export function AdminLevelControls({ levelEventId, showReorder = false }: AdminL
             size="sm"
             variant="outline"
             disabled={isPending}
-            onClick={wrap('Removed from official', () => removeLevel(levelEventId))}
+            onClick={wrap('Removed from official', () => removeLevel(levelCoordinate))}
             className="gap-1"
           >
             <X className="h-4 w-4" />
@@ -76,7 +77,7 @@ export function AdminLevelControls({ levelEventId, showReorder = false }: AdminL
         <Button
           size="sm"
           disabled={isPending}
-          onClick={wrap('Added to official', () => addLevel(levelEventId))}
+          onClick={wrap('Added to official', () => addLevel(levelCoordinate))}
           className="gap-1"
         >
           <Star className="h-4 w-4" />

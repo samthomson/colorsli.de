@@ -8,13 +8,23 @@ the relay level alongside type-specific tags.
 
 ---
 
-## Kind 7283 — Color Slide level (regular, immutable)
+## Kind 37283 — Color Slide level (addressable, editable)
 
-A user-published puzzle. Once published the level is treated as immutable:
-the event id is the level id, and gameplay results reference it by `e` tag.
+A user-published puzzle. Each level has a stable random `d` tag chosen at
+first publish; republishing with the same `d` tag *replaces* the prior
+revision (NIP-01 addressable semantics), so authors can edit their own
+levels after publishing.
+
+The canonical identifier of a level is its **addressable coordinate**
+`37283:<author hex pubkey>:<d>`. Other Color Slide events that point at a
+level (completions, save game, official list) reference the coordinate via
+`a` tags, never the event id, so they survive level edits.
 
 ### Tags
 
+- `["d", "<random slug>"]` — required, addressable d-tag. Stable for the
+  lifetime of the level. The client generates 12 chars of base36 from
+  `crypto.getRandomValues` on first publish.
 - `["t", "colorslide"]` — required, top-level filter.
 - `["t", "colorslide-level"]` — required, identifies the event as a level.
 - `["title", "<level title>"]` — required, plain text, max 64 chars.
@@ -52,11 +62,22 @@ and `null` represents an empty cell.
 
 Clients SHOULD re-validate on read and ignore boards that fail.
 
+### Editing
+
+Only the original author can edit a level: NIP-01 addressable replacement
+is keyed by `(kind, pubkey, d)`, so a different pubkey publishing with the
+same d-tag creates a *separate* level under their own coordinate, not a
+replacement of the original.
+
+When deduping query results, the client keeps the highest `created_at` per
+coordinate. Relays that honour addressable replacement will only return one
+revision per coordinate anyway; the client-side dedupe is defense-in-depth.
+
 ---
 
 ## Kind 30888 — Official Color Slide progression list (addressable, replaceable)
 
-Curates the level progression shown on the Practice page. Only events authored
+Curates the level progression shown on the Play page. Only events authored
 by trusted admin pubkeys (configured in `src/lib/admin.ts`) are honoured by the
 client; any other publisher is ignored.
 
@@ -64,7 +85,10 @@ client; any other publisher is ignored.
 
 - `["d", "official-levels"]` — required, identifies the list. Always this exact value.
 - `["t", "colorslide"]` — required.
-- `["e", "<level event id>", "", "level"]` — one per level, in **play order**.
+- `["a", "37283:<author>:<d>", "", "level"]` — one per level, in **play
+  order**. References the addressable coordinate of the level so an admin
+  doesn't have to republish the list every time a level author edits a
+  level.
 - `["alt", "Color Slide official level progression (https://colorsli.de)"]` —
   required NIP-31 alt text.
 
@@ -100,7 +124,9 @@ Players who opt out simply do not appear on the leaderboard.
 
 - `["t", "colorslide"]`
 - `["t", "colorslide-completion"]`
-- `["e", "<level event id>", "", "level"]` — the level cleared.
+- `["a", "37283:<author>:<d>", "", "level"]` — addressable coordinate of
+  the level cleared. Coordinates are used (not event ids) so a leaderboard
+  follows a level across edits.
 - `["score", "<n>"]` — integer score, see `src/lib/scoring.ts`.
 - `["time", "<seconds>"]` — wall-clock seconds spent on the level.
 - `["moves", "<n>"]` — slide moves used.
@@ -125,7 +151,7 @@ scorer pubkey set or proof-of-play challenge events.
 ## Kind 30078 — Color Slide save game (NIP-78, addressable, encrypted)
 
 Per-user "save file" that records which levels the player has cleared. Drives
-the sequential unlock logic in `/practice` and persists progress across
+the sequential unlock logic in `/play` and persists progress across
 devices independently of the public leaderboard.
 
 The event itself is public (anyone can see "this user has a Color Slide save
@@ -146,21 +172,29 @@ NIP-44 ciphertext (encrypted with `peer = self.pubkey`) of the JSON:
 
 ```json
 {
-  "version": 1,
-  "completed": ["<level event id>", "<level event id>", "..."]
+  "version": 2,
+  "completed": ["37283:<author>:<d>", "37283:<author>:<d>", "..."]
 }
 ```
 
-`completed` is an unordered, de-duplicated list of kind-7283 level event ids
-the player has cleared at least once. There are intentionally no scores or
-timestamps here — kind-1 completions are the source of truth for any
-leaderboard / personal-best display.
+`completed` is an unordered, de-duplicated list of level *coordinates* the
+player has cleared at least once. Coordinates (not event ids) are stored so
+unlocks survive level edits — when an author republishes a level, existing
+completions still apply.
+
+`version` is the schema version: bumped to `2` when coordinates replaced
+event ids. Clients silently treat any other version as an empty save (no
+migration; pre-launch the assumption is no real users to migrate).
+
+There are intentionally no scores or timestamps here — kind-1 completions
+are the source of truth for any leaderboard / personal-best display.
 
 ### Replacement semantics
 
 Standard NIP-78 replaceability: only the most recent event per
 `(pubkey, kind, d)` is retained. The client reads the latest event, decrypts
-it, merges in the new completion id, encrypts the result, and republishes.
+it, merges in the new completion coordinate, encrypts the result, and
+republishes.
 
 ### Failure handling
 

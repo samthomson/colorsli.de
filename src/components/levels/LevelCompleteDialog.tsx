@@ -1,4 +1,4 @@
-import { ArrowRight, DoorOpen, RefreshCw, XCircle } from 'lucide-react';
+import { ArrowRight, DoorOpen, RefreshCw, RotateCcw, XCircle } from 'lucide-react';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,34 +15,39 @@ export type SaveStatus = 'idle' | 'pending' | 'success' | 'error';
 
 type LevelCompleteDialogProps = {
   open: boolean;
-  /** Display title for the just-cleared level. */
+  /** Display title for the just-cleared level (or "Practice" / similar). */
   levelTitle: string;
   /** Final stats to display. */
   result: { score: number; seconds: number; moves: number };
 
-  /** Save game write status (the unlock-driving event). Fires immediately on
-   * dialog open so the toggle is informational; we surface it only on error
-   * so the user can retry. */
-  saveStatus: SaveStatus;
-  onRetrySave: () => void;
+  /** Save-game write status. Omit in practice mode (nothing to save). */
+  saveStatus?: SaveStatus;
+  onRetrySave?: () => void;
 
-  /** "Post to leaderboards" preference. The actual kind-1 publish only fires
-   * when the user clicks a CTA, so this toggle is meaningful right up to
-   * that moment. */
-  shareEnabled: boolean;
-  onShareToggle: (next: boolean) => void;
+  /** "Post to leaderboards" preference. Omit in practice mode (no level
+   * coordinate to attach a kind-1 to). */
+  shareEnabled?: boolean;
+  onShareToggle?: (next: boolean) => void;
 
-  /** When provided, primary CTA advances to the next level. */
+  /** When provided, primary CTA advances to the next level (level mode). */
   onAdvance?: () => void;
+  /** When provided, primary CTA restarts on a fresh board (practice mode). */
+  onPlayAgain?: () => void;
   /** Always-present secondary CTA — exit to the main menu. */
   onExit: () => void;
 };
 
 /**
  * Post-completion arcade modal. Hard-locked: the only way out is one of the
- * two CTAs (no X button, no escape, no outside click). The kind-1 leaderboard
- * publish does NOT fire on dialog open — it kicks off after the user picks a
- * CTA, which is why the toggle remains effective right up until they leave.
+ * two CTAs (no X button, no escape, no outside click). Adapts to the calling
+ * mode:
+ *
+ * - **Level mode** (LevelPlayer): shows save status (on error) + share toggle,
+ *   primary CTA "Next Level" or none, secondary "Exit Game". The kind-1
+ *   leaderboard publish does NOT fire on open — it kicks off after the user
+ *   picks a CTA, so the toggle is meaningful right up until they leave.
+ * - **Practice mode** (Practice): no save/share UI, primary CTA "Play Again"
+ *   (regenerates a random board), secondary "Exit Game".
  */
 export function LevelCompleteDialog({
   open,
@@ -53,8 +58,13 @@ export function LevelCompleteDialog({
   shareEnabled,
   onShareToggle,
   onAdvance,
+  onPlayAgain,
   onExit,
 }: LevelCompleteDialogProps) {
+  const showShare = onShareToggle !== undefined && shareEnabled !== undefined;
+  const showSaveError =
+    saveStatus === 'error' && onRetrySave !== undefined;
+
   return (
     <Dialog open={open}>
       <DialogContent
@@ -65,13 +75,14 @@ export function LevelCompleteDialog({
         className="max-w-md gap-0 overflow-hidden border-4 border-white/85 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-0 shadow-[0_8px_50px_rgba(34,211,238,0.35),0_0_0_1px_rgba(15,23,42,0.05)]"
       >
         <div className="px-6 pt-7 pb-2 text-center">
+          <p className="arcade-label text-[11px] text-slate-600/80">★ {levelTitle} ★</p>
           <DialogTitle asChild>
-            <h2 className="brand-arcade-title bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
-              Stage Clear!
+            <h2 className="brand-arcade-title mt-2 bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
+              Level Complete
             </h2>
           </DialogTitle>
-          <DialogDescription className="arcade-label mt-3 text-[11px] text-slate-700/70">
-            ★ {levelTitle} ★
+          <DialogDescription className="sr-only">
+            You cleared {levelTitle}
           </DialogDescription>
         </div>
 
@@ -82,7 +93,7 @@ export function LevelCompleteDialog({
             <ArcadeStat label="Moves" value={String(result.moves)} />
           </div>
 
-          {saveStatus === 'error' && (
+          {showSaveError && (
             <div className="flex items-center gap-2 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
               <XCircle className="h-4 w-4 shrink-0" />
               <span className="flex-1 font-bold">Couldn't save your run</span>
@@ -98,22 +109,24 @@ export function LevelCompleteDialog({
             </div>
           )}
 
-          <label className="flex items-start gap-3 rounded-2xl border-2 border-dashed border-cyan-400/60 bg-cyan-50/70 px-4 py-3 transition-colors hover:bg-cyan-50">
-            <Switch
-              checked={shareEnabled}
-              onCheckedChange={onShareToggle}
-              aria-label="Post score to leaderboards"
-              className="mt-0.5"
-            />
-            <span className="flex-1">
-              <span className="arcade-label block text-[11px] text-cyan-900">
-                Post to leaderboards
+          {showShare && (
+            <label className="flex items-start gap-3 rounded-2xl border-2 border-dashed border-cyan-400/60 bg-cyan-50/70 px-4 py-3 transition-colors hover:bg-cyan-50">
+              <Switch
+                checked={shareEnabled}
+                onCheckedChange={onShareToggle}
+                aria-label="Post score to leaderboards"
+                className="mt-0.5"
+              />
+              <span className="flex-1">
+                <span className="arcade-label block text-[11px] text-cyan-900">
+                  Post score to leaderboards
+                </span>
+                <span className="mt-0.5 block text-xs text-cyan-900/70">
+                  Share your run publicly so you appear on the global + per-level scoreboards.
+                </span>
               </span>
-              <span className="mt-0.5 block text-xs text-cyan-900/70">
-                Off keeps this run private to you.
-              </span>
-            </span>
-          </label>
+            </label>
+          )}
 
           <div className="flex items-center justify-between gap-3 pt-1">
             <ArcadePill tone="slate" size="sm" onClick={onExit}>
@@ -126,6 +139,13 @@ export function LevelCompleteDialog({
               <ArcadePill tone="cyan" size="md" onClick={onAdvance}>
                 Next Level
                 <ArrowRight className={arcadePillIconSize('md')} />
+              </ArcadePill>
+            ) : onPlayAgain ? (
+              <ArcadePill tone="cyan" size="md" onClick={onPlayAgain}>
+                <ArcadePillIcon tone="cyan" size="md">
+                  <RotateCcw className={arcadePillIconSize('md')} />
+                </ArcadePillIcon>
+                Play Again
               </ArcadePill>
             ) : null}
           </div>

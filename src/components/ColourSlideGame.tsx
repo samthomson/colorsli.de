@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RotateCcw, Trophy, Settings2, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -35,9 +35,21 @@ export type ColourSlideGameProps = {
   levelLabel?: string;
   /** Called once when the player clears the board. */
   onComplete?: (result: CompletionResult) => void;
+  /**
+   * When false, the controls row (size selector, moves, timer, Start Over)
+   * is rendered with `visibility: hidden` so layout is preserved but nothing
+   * shows through the Press-Start splash. Defaults to `true` so callers that
+   * don't gate on a splash continue to work unchanged.
+   */
+  started?: boolean;
 };
 
-export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: ColourSlideGameProps = {}) {
+export function ColourSlideGame({
+  initialBoard,
+  levelLabel,
+  onComplete,
+  started = true,
+}: ColourSlideGameProps = {}) {
   const isLevelMode = initialBoard !== undefined;
 
   const [gridSize, setGridSize] = useState(initialBoard?.length ?? 10);
@@ -77,12 +89,14 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
   // Derived: blocked cells always reflect the current board with no setState.
   const blocked = useMemo(() => checkBlocked(board), [board]);
 
-  // Tick the elapsed-time clock once a second while in level mode and active.
+  // Tick the elapsed-time clock once a second while a run is active.
+  // (Also ticks for practice mode so the post-completion modal can show
+  // a real time/score, not zeros.)
   useEffect(() => {
-    if (!isLevelMode || startedAt === null || isComplete) return;
+    if (startedAt === null || isComplete) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [isLevelMode, startedAt, isComplete]);
+  }, [startedAt, isComplete]);
 
   // Hard rule: matching/clearing is triggered only from drag release. We call
   // this synchronously from `handleMouseUp` to avoid setState-in-effect.
@@ -114,19 +128,19 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
     });
   }, []);
 
-  // Fire onComplete exactly once when the level clears. We compute the final
-  // seconds here without any setState so this effect only side-effects on the
-  // parent — display continues to derive from `now` (which the timer effect
-  // freezes by clearing its interval once isComplete is true).
+  // Fire onComplete exactly once when the board clears. Practice + level
+  // modes both notify their parent — the only difference is the modal the
+  // parent decides to show. We compute final seconds here without any
+  // setState so this effect only side-effects on the parent.
   useEffect(() => {
     if (!isComplete || completionFiredRef.current) return;
-    if (!isLevelMode || !onComplete) return;
+    if (!onComplete) return;
     const elapsedMs = startedAt !== null ? Date.now() - startedAt : 0;
     const seconds = Math.max(0, Math.floor(elapsedMs / 1000));
     const score = computeScore({ moves: moveCount, seconds });
     completionFiredRef.current = true;
     onComplete({ moves: moveCount, seconds, score });
-  }, [isComplete, isLevelMode, onComplete, moveCount, startedAt]);
+  }, [isComplete, onComplete, moveCount, startedAt]);
 
   const elapsedSeconds = useMemo(() => {
     if (startedAt === null) return 0;
@@ -205,8 +219,8 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
       });
 
       setMoveCount(prev => prev + 1);
-      // Start the level timer on the very first move.
-      if (isLevelMode && startedAt === null) {
+      // Start the timer on the very first move (both modes).
+      if (startedAt === null) {
         const t = Date.now();
         setStartedAt(t);
         setNow(t);
@@ -226,7 +240,7 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
     <Card className="w-full max-w-4xl shadow-2xl">
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-cyan-500 bg-clip-text text-transparent sm:text-3xl">
+          <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
             {levelLabel ?? 'Color Slide'}
           </CardTitle>
           {isComplete && (
@@ -237,7 +251,12 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
           )}
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
+        <div
+          className={cn(
+            'flex items-center gap-4 flex-wrap',
+            !started && 'invisible',
+          )}
+        >
           {!isLevelMode && (
             <div className="flex items-center gap-2">
               <Settings2 className="h-4 w-4 text-muted-foreground" />
@@ -254,27 +273,27 @@ export function ColourSlideGame({ initialBoard, levelLabel, onComplete }: Colour
             </div>
           )}
 
-          <div className="text-sm text-muted-foreground">
-            Moves: <span className="font-semibold text-foreground">{moveCount}</span>
+          <div className="arcade-label text-xs text-muted-foreground">
+            Moves: <span className="text-foreground">{moveCount}</span>
           </div>
 
-          {isLevelMode && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Timer className="h-4 w-4" />
-              <span className="font-semibold text-foreground">{formatTime(elapsedSeconds)}</span>
-            </div>
-          )}
+          <div className="arcade-label flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Timer className="h-4 w-4" />
+            <span className="tabular-nums text-foreground">{formatTime(elapsedSeconds)}</span>
+          </div>
 
           {!isLevelMode && (
-            <Button
-              variant="outline"
+            <ArcadePill
+              tone="slate"
               size="sm"
               onClick={() => resetGame(gridSize)}
               className="ml-auto"
             >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              New Game
-            </Button>
+              <ArcadePillIcon tone="slate" size="sm">
+                <RotateCcw className={arcadePillIconSize('sm')} />
+              </ArcadePillIcon>
+              Start Over
+            </ArcadePill>
           )}
         </div>
 

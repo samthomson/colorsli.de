@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Play } from 'lucide-react';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { buildYouTubeEmbedUrl, extractYouTubeId } from '@/lib/youtube';
@@ -11,6 +11,14 @@ type Props = {
   unmuted: boolean;
   /** Notify parent when the user makes a choice on the splash. */
   onUnmutedChange: (next: boolean) => void;
+  /**
+   * Whether the splash has been dismissed and the iframe should be mounted.
+   * Lifted to the parent so siblings (e.g. the music toggle) can react to
+   * the same start gesture and only appear after the user has hit Start.
+   */
+  started: boolean;
+  /** Called when the user hits Start on the splash. */
+  onStartedChange: (next: boolean) => void;
 };
 
 /**
@@ -33,10 +41,15 @@ type Props = {
  * and a near-opaque pale backdrop so it visually fits the rounded panel
  * underneath rather than clipping at the panel's curved corners.
  */
-export function YouTubeBackground({ url, unmuted, onUnmutedChange }: Props) {
+export function YouTubeBackground({
+  url,
+  unmuted,
+  onUnmutedChange: _onUnmutedChange,
+  started,
+  onStartedChange,
+}: Props) {
   const videoId = extractYouTubeId(url);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [started, setStarted] = useState(false);
 
   // Whenever the user toggles the music preference *after* the iframe is
   // mounted, push the matching command down to YouTube via postMessage.
@@ -65,7 +78,7 @@ export function YouTubeBackground({ url, unmuted, onUnmutedChange }: Props) {
     // Press Start always satisfies autoplay-with-sound. The user's persisted
     // music preference (`unmuted`) decides whether the iframe actually plays
     // sound — if they previously muted, mounting respects that.
-    setStarted(true);
+    onStartedChange(true);
   };
 
   return (
@@ -95,8 +108,10 @@ export function YouTubeBackground({ url, unmuted, onUnmutedChange }: Props) {
  * Generic "press start" interstitial — gated user gesture for audio autoplay.
  *
  * Renders absolutely inside the player container, matching the panel's
- * rounded shape with a pale, near-opaque backdrop so corners sit cleanly
- * over the underlying rounded panel.
+ * rounded shape with a *translucent* pale wash + light blur so the level
+ * board underneath is still visible (just slightly hazed) — the splash
+ * dims the play surface without hiding it, which makes the Start button
+ * feel like a launch overlay rather than a loading screen.
  */
 function PressStartSplash({ onPressStart }: { onPressStart: () => void }) {
   return (
@@ -105,9 +120,9 @@ function PressStartSplash({ onPressStart }: { onPressStart: () => void }) {
       aria-modal="true"
       aria-label="Press Start"
       className={cn(
-        'absolute inset-0 z-20 flex items-center justify-center rounded-2xl p-6 backdrop-blur-sm',
-        'bg-gradient-to-br from-white/95 via-white/92 to-cyan-50/92',
-        'shadow-[inset_0_0_60px_rgba(56,189,248,0.18)]',
+        'absolute inset-0 z-20 flex items-center justify-center rounded-2xl p-6 backdrop-blur-[2px]',
+        'bg-gradient-to-br from-white/25 via-white/20 to-cyan-50/25',
+        'shadow-[inset_0_0_60px_rgba(56,189,248,0.15)]',
       )}
     >
       <ArcadePill tone="cyan" size="xl" onClick={onPressStart}>

@@ -109,6 +109,23 @@
   50% { filter: saturate(1.35) contrast(1.16) brightness(1.05); }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Arcade Typography & UI Components
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* .brand-arcade-title
+   
+   Main display font for hero headlines, primary CTAs, and celebration
+   headers. Uses Bungee with the full spectrum rainbow gradient, layered text
+   shadow/stroke, and continuous rocking/color-shifting animation. Apply to
+   heading elements (h1, h2), then add `bg-clip-text text-transparent` to
+   reveal the gradient.
+   
+   Usage:
+     <h1 className="brand-arcade-title bg-clip-text text-transparent text-[size]">
+       Color Slide
+     </h1>
+*/
 .brand-arcade-title {
   font-family: "Bungee", Impact, "Arial Black", "Franklin Gothic Heavy", sans-serif;
   letter-spacing: 0.12em;
@@ -137,15 +154,34 @@
   will-change: transform, background-position, filter;
 }
 
+/* .brand-arcade-tagline
+   
+   Secondary display font for taglines, subtitles under the main brand logo,
+   and page descriptors. Uses default font stack but applies Bungee styling
+   via uppercase + wide tracking. Add this to small subtitle text beneath the
+   brand-arcade-title.
+   
+   Usage:
+     <p className="brand-arcade-tagline text-xs uppercase">
+       rot your brain and stimulate it at the same time
+     </p>
+*/
 .brand-arcade-tagline {
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.75),
     0 0 12px rgba(14, 165, 233, 0.25);
 }
 
-/* Compact arcade-style pill buttons (Home, Pending, etc.). Provides only
-   typography + chunky shadow defaults; per-button colors come from Tailwind
-   so each pill can express its own neon hue. */
+/* .arcade-pill
+   
+   Chunky neon pill buttons (Home, Music On, Pending, Join, etc.) — see
+   src/components/ArcadePill.tsx for the component API. This base class
+   provides the Bungee typography + text stroke shared by all pill instances;
+   per-button gradients + shadows come from the tone prop.
+   
+   Usage:
+     <ArcadePill tone="cyan" size="md">Home</ArcadePill>
+*/
 .arcade-pill {
   font-family: "Bungee", Impact, "Arial Black", "Franklin Gothic Heavy", sans-serif;
   letter-spacing: 0.16em;
@@ -154,6 +190,23 @@
     0 1px 0 rgba(0, 0, 0, 0.35),
     0 0 6px rgba(255, 255, 255, 0.3);
   -webkit-text-stroke: 0.4px rgba(8, 47, 73, 0.35);
+}
+
+/* .arcade-label
+   
+   Compact Bungee utility for small labels (stat headers, secondary UI text,
+   level-name badges). No shadow or stroke — keeps the overhead light when
+   you want the Bungee look on tiny text that doesn't need the full arcade
+   chrome. Use uppercase + tracking.
+   
+   Usage:
+     <p className="arcade-label text-[10px] text-slate-500">SCORE</p>
+     <span className="arcade-label text-xs">★ Level Name ★</span>
+*/
+.arcade-label {
+  font-family: "Bungee", Impact, "Arial Black", "Franklin Gothic Heavy", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
 @keyframes arcade-pill-bob {
@@ -166,14 +219,25 @@
   will-change: transform;
 }
 
-/* Small arcade-style label utility (no shadow / stroke) — used for stat
-   labels and similar bits where the bigger arcade-pill chrome would be too
-   loud. */
-.arcade-label {
-  font-family: "Bungee", Impact, "Arial Black", "Franklin Gothic Heavy", sans-serif;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+/* .cursor-arcade-play
+   
+   Custom hand-feel cursor for any "tap to play" surface — a chunky white
+   disc with a cyan play triangle, matching the ArcadePill aesthetic. Used
+   on level cards in LevelGrid so they feel game-y rather than generic
+   web-button. The hotspot sits at the centre of the disc (16,16).
+   
+   Usage:
+     <button className="cursor-arcade-play">Play</button>
+*/
+.cursor-arcade-play {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'><circle cx='17' cy='17' r='14' fill='%23ffffff' stroke='%230369a1' stroke-width='2.5'/><polygon points='14,11 14,23 24,17' fill='%2306b6d4'/></svg>") 17 17,
+    pointer;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   End Arcade Typography & UI Components
+   ────────────────────────────────────────────────────────────────────────── */
 
 
 .bubble-bg {

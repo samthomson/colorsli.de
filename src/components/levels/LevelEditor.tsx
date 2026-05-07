@@ -9,29 +9,45 @@ import { usePublishLevel } from '@/hooks/usePublishLevel';
 import { cn } from '@/lib/utils';
 import { COLORS, emptyBoard, validateLevel, type Board, type Color } from '@/lib/colorSlide';
 import { extractYouTubeId } from '@/lib/youtube';
+import type { ParsedLevel } from '@/lib/levelEvent';
 
 const MIN_DIM = 4;
 const MAX_DIM = 12;
 const DEFAULT_DIM = 6;
 
+type LevelEditorProps = {
+  /**
+   * If provided, the editor opens in *edit mode*: fields are pre-filled
+   * from this level, and publishing replaces the level (reuses the d-tag)
+   * rather than creating a new one. Author should already be checked by
+   * the caller — only the level's author can replace it.
+   */
+  initial?: ParsedLevel;
+};
+
 /**
- * Paint-style level editor.
+ * Paint-style level editor — also handles editing an existing level when
+ * `initial` is passed.
  *
  * - Adjust rows/cols with +/- steppers.
  * - Pick a color (or eraser) and click cells to paint.
  * - Live validation panel surfaces blocked cells (5+ runs) and color counts
  *   that aren't multiples of 4. Publish is disabled until the level is valid.
  */
-export function LevelEditor() {
+export function LevelEditor({ initial }: LevelEditorProps = {}) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { publishLevel, isPending } = usePublishLevel();
 
-  const [title, setTitle] = useState('');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [rows, setRows] = useState(DEFAULT_DIM);
-  const [cols, setCols] = useState(DEFAULT_DIM);
-  const [board, setBoard] = useState<Board>(() => emptyBoard(DEFAULT_DIM, DEFAULT_DIM));
+  const isEdit = Boolean(initial);
+
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [youtubeUrl, setYoutubeUrl] = useState(initial?.youtubeUrl ?? '');
+  const [rows, setRows] = useState(initial?.rows ?? DEFAULT_DIM);
+  const [cols, setCols] = useState(initial?.cols ?? DEFAULT_DIM);
+  const [board, setBoard] = useState<Board>(
+    () => initial?.board ?? emptyBoard(DEFAULT_DIM, DEFAULT_DIM),
+  );
   const [activeColor, setActiveColor] = useState<Color>(COLORS[0]);
   // The first cell pressed in a stroke determines the action for the whole
   // stroke, so dragging stays consistent:
@@ -102,20 +118,23 @@ export function LevelEditor() {
   const onPublish = async () => {
     if (!canPublish) return;
     try {
-      const event = await publishLevel({
+      await publishLevel({
         title: trimmedTitle,
         board,
         youtubeUrl: trimmedYoutube || undefined,
+        existingDTag: initial?.dTag,
       });
       toast({
-        title: 'Level published',
-        description: `Saved as ${event.id.slice(0, 8)}…`,
+        title: isEdit ? 'Level updated' : 'Level published',
+        description: isEdit
+          ? 'Your changes are live for everyone.'
+          : 'Your level is now in Discover.',
       });
       navigate('/discover');
     } catch (err) {
       console.error('Failed to publish level', err);
       toast({
-        title: 'Could not publish level',
+        title: isEdit ? 'Could not update level' : 'Could not publish level',
         description: err instanceof Error ? err.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -127,19 +146,20 @@ export function LevelEditor() {
   return (
     <Card className="w-full shadow-2xl">
       <CardHeader className="space-y-3">
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-cyan-500 bg-clip-text text-transparent">
-          Level Editor
+        <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
+          {isEdit ? 'Edit Level' : 'Level Editor'}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Paint colored cells to design a level. Each color must appear in groups of 4
-          (no exact 5+ runs). Publish to share with the community.
+        <p className="arcade-label text-[10px] tracking-[0.18em] text-muted-foreground">
+          {isEdit
+            ? 'Update this level. Republishing replaces the previous revision so existing unlocks and leaderboard entries carry over.'
+            : 'Paint colored cells to design a level. Each color must appear in groups of 4 (no exact 5+ runs). Publish to share with the community.'}
         </p>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <label className="md:col-span-3">
-            <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-slate-600">
+            <span className="arcade-label mb-1 block text-[11px] text-slate-600">
               Title <span className="text-red-500">*</span>
             </span>
             <Input
@@ -152,7 +172,7 @@ export function LevelEditor() {
           </label>
 
           <label className="md:col-span-3">
-            <span className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-600">
+            <span className="arcade-label mb-1 flex items-center gap-1.5 text-[11px] text-slate-600">
               <Music2 className="h-3.5 w-3.5" />
               Background music (YouTube URL, optional)
             </span>
@@ -164,7 +184,7 @@ export function LevelEditor() {
               aria-invalid={trimmedYoutube !== '' && !youtubeValid}
             />
             {trimmedYoutube !== '' && !youtubeValid && (
-              <span className="mt-1 block text-xs text-red-600">
+              <span className="arcade-label mt-1 block text-[10px] text-red-600">
                 Doesn't look like a YouTube link.
               </span>
             )}
@@ -172,14 +192,16 @@ export function LevelEditor() {
 
           <Stepper label="Rows" value={rows} min={MIN_DIM} max={MAX_DIM} onChange={(v) => resizeBoard(v, cols)} />
           <Stepper label="Cols" value={cols} min={MIN_DIM} max={MAX_DIM} onChange={(v) => resizeBoard(rows, v)} />
-          <div className="rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-600">
-            <p className="font-bold uppercase tracking-widest text-slate-500">Board</p>
-            <p className="mt-1">{rows} x {cols} ({rows * cols} cells)</p>
+          <div className="rounded-md border border-dashed border-slate-300 px-3 py-2">
+            <p className="arcade-label text-[11px] text-slate-500">Board</p>
+            <p className="arcade-label mt-1 text-[10px] text-slate-600">
+              {rows} x {cols} ({rows * cols} cells)
+            </p>
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-600">Palette</p>
+          <p className="arcade-label mb-2 text-[11px] text-slate-600">Palette</p>
           <div className="flex flex-wrap items-center gap-2">
             {COLORS.map(color => (
               <button
@@ -201,7 +223,7 @@ export function LevelEditor() {
               type="button"
               onClick={() => setActiveColor(null)}
               className={cn(
-                'flex h-9 items-center gap-1 rounded-full border-2 px-3 text-xs font-bold uppercase tracking-widest transition-all',
+                'arcade-label flex h-9 items-center gap-1 rounded-full border-2 px-3 text-[10px] transition-all',
                 activeColor === null
                   ? 'scale-110 border-slate-900 bg-slate-900 text-white shadow-md'
                   : 'border-slate-300 text-slate-600 hover:scale-105',
@@ -217,8 +239,8 @@ export function LevelEditor() {
         {validation.blockedCells.length > 0 && (
           <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/20 dark:text-red-400">
             <span className="text-lg font-bold">!</span>
-            <p>
-              <strong>5+ in a row detected!</strong> Break them up — colors must form exact groups of 4.
+            <p className="arcade-label text-[11px]">
+              5+ in a row detected — colors must form exact groups of 4.
             </p>
           </div>
         )}
@@ -270,13 +292,13 @@ export function LevelEditor() {
 
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-white/70 p-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-600">
-                Validation
-              </p>
+              <p className="arcade-label mb-2 text-[11px] text-slate-600">Validation</p>
               {Object.keys(validation.colorCounts).length === 0 ? (
-                <p className="text-sm text-slate-500">Paint some cells to begin.</p>
+                <p className="arcade-label text-[11px] text-slate-500">
+                  Paint some cells to begin.
+                </p>
               ) : (
-                <ul className="space-y-1.5 text-sm">
+                <ul className="space-y-1.5">
                   {Object.entries(validation.colorCounts).map(([color, count]) => {
                     const ok = count % 4 === 0;
                     return (
@@ -286,7 +308,7 @@ export function LevelEditor() {
                           style={{ backgroundColor: color }}
                         />
                         <span className="font-mono text-xs">{color}</span>
-                        <span className={cn('ml-auto text-xs font-bold', ok ? 'text-emerald-600' : 'text-red-600')}>
+                        <span className={cn('arcade-label ml-auto text-[10px]', ok ? 'text-emerald-600' : 'text-red-600')}>
                           {count} {ok ? 'ok' : `(need +${4 - (count % 4)})`}
                         </span>
                       </li>
@@ -299,19 +321,21 @@ export function LevelEditor() {
             <Button
               onClick={onPublish}
               disabled={!canPublish || isPending}
-              className="w-full gap-2"
+              className="arcade-label w-full gap-2 text-xs"
               size="lg"
             >
               <Save className="h-4 w-4" />
-              {isPending ? 'Publishing...' : 'Publish level'}
+              {isPending
+                ? (isEdit ? 'Updating...' : 'Publishing...')
+                : (isEdit ? 'Update level' : 'Publish level')}
             </Button>
             {!canPublish && (
-              <p className="text-center text-xs text-slate-500">
+              <p className="arcade-label text-center text-[10px] text-slate-500">
                 {trimmedTitle.length === 0
-                  ? 'Add a title to publish.'
+                  ? `Add a title to ${isEdit ? 'update' : 'publish'}.`
                   : !youtubeValid
-                    ? 'Fix the YouTube URL to publish.'
-                    : 'Fix validation errors to enable publishing.'}
+                    ? `Fix the YouTube URL to ${isEdit ? 'update' : 'publish'}.`
+                    : `Fix validation errors to enable ${isEdit ? 'updating' : 'publishing'}.`}
               </p>
             )}
           </div>
@@ -336,7 +360,7 @@ function Stepper({
 }) {
   return (
     <div className="rounded-md border border-slate-200 px-3 py-2">
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</p>
+      <p className="arcade-label text-[11px] text-slate-500">{label}</p>
       <div className="mt-1 flex items-center justify-between gap-2">
         <Button
           variant="outline"
