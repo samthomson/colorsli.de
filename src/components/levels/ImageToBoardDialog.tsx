@@ -399,25 +399,43 @@ function BoardPreview({ board, cellPx }: { board: Board; cellPx: number }) {
 
 // ---------- pure helpers ----------
 
-const SAMPLE_DIM = 96;
-/** How many top-frequency buckets we consider as palette candidates. The
- * farthest-first selection runs over this filtered pool so we never pick a
- * single anti-aliased outlier as a "color". */
-const PALETTE_CANDIDATE_POOL = 80;
-
-type Bucket = { color: [number, number, number]; count: number };
+const SAMPLE_DIM = 128;
+/** Bits per channel for the bucketing pre-pass. 5 bits = 32 levels per channel
+ * = up to 32k unique buckets. This is fine enough that perceptually distinct
+ * shades stay in separate buckets, but coarse enough to absorb sensor noise
+ * and JPEG artefacts. */
+const BUCKET_BITS = 5;
+/** Max candidates passed to farthest-first. Sorting by frequency desc then
+ * truncating filters single-pixel anti-aliasing outliers without dropping
+ * any genuinely-present color cluster. */
+const MAX_CANDIDATE_POOL = 512;
 
 /**
- * Extract `n` representative colors from `img`. We bucket pixels into a
- * 4-bit-per-channel grid (4096 buckets) and take the top-K by frequency as
- * candidates. We then run *farthest-first traversal* over that pool: seed
- * with the most populous bucket, then repeatedly add the candidate that has
- * the largest minimum RGB-distance to already-picked colors.
+ * Extract `n` representative colors from `img` via **pure farthest-first
+ * traversal in CIE Lab color space**.
  *
- * Result: as `n` grows from 2 → 16 the picks fan out across color space,
- * giving the user genuinely distinct hues, not progressively-closer shades.
+ * Why Lab instead of RGB: RGB Euclidean distance does NOT match human
+ * perception. Two "dark navy" shades can be RGB-far but visually identical;
+ * Lab is engineered so that distance ≈ perceived difference. Picking spread
+ * in Lab therefore picks spread that the *eye* notices.
+ *
+ * Why pure farthest-first instead of k-means: k-means optimises *coverage*
+ * (clusters land where the pixels are dense), so an image with lots of blues
+ * + a sliver of gold will spend cluster budget on multiple blues before
+ * reaching the gold. The user wants the opposite — *diversity*. Farthest
+ * first picks the dominant color first, then at every step adds the
+ * remaining candidate that's MAXIMUM-FAR from anything already picked. So
+ * the slider goes "next pick = most different from what you have", which is
+ * what we want for a paintable palette.
+ *
+ * No weight bias in the selection score either (a `× sqrt(weight)` term I
+ * tried earlier just brought back the "lots of blues" problem). The
+ * candidate POOL is filtered by frequency (anti-noise) but the *selection*
+ * within the pool is purely about Lab spread.
  */
 function extractPalette(img: HTMLImageElement, n: number): string[] {
+  if (n <= 0) return [];
+
   const canvas = document.createElement('canvas');
   canvas.width = SAMPLE_DIM;
   canvas.height = SAMPLE_DIM;
@@ -429,15 +447,27 @@ function extractPalette(img: HTMLImageElement, n: number): string[] {
   ctx.drawImage(img, 0, 0, SAMPLE_DIM, SAMPLE_DIM);
   const data = ctx.getImageData(0, 0, SAMPLE_DIM, SAMPLE_DIM).data;
 
-  type RawBucket = { rSum: number; gSum: number; bSum: number; count: number };
-  const buckets = new Map<number, RawBucket>();
+  // Bucket pixels at BUCKET_BITS per channel and accumulate the *mean* RGB
+  // per bucket (so the candidate color is the actual average, not an
+  // arbitrary bucket-corner). Skip transparent pixels.
+  type Bucket = {
+    rSum: number;
+    gSum: number;
+    bSum: number;
+    count: number;
+  };
+  const shift = 8 - BUCKET_BITS;
+  const buckets = new Map<number, Bucket>();
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
     const a = data[i + 3];
     if (a < 128) continue;
-    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const key =
+      ((r >> shift) << (BUCKET_BITS * 2)) |
+      ((g >> shift) << BUCKET_BITS) |
+      (b >> shift);
     const existing = buckets.get(key);
     if (existing) {
       existing.rSum += r;
@@ -449,51 +479,69 @@ function extractPalette(img: HTMLImageElement, n: number): string[] {
     }
   }
 
-  const candidates: Bucket[] = [...buckets.values()]
-    .map((b) => ({
-      color: [
-        Math.round(b.rSum / b.count),
-        Math.round(b.gSum / b.count),
-        Math.round(b.bSum / b.count),
-      ] as [number, number, number],
+  if (buckets.size === 0) return [];
+
+  type Candidate = {
+    rgb: [number, number, number];
+    lab: [number, number, number];
+    count: number;
+  };
+  const allCandidates: Candidate[] = [...buckets.values()].map((b) => {
+    const r = b.rSum / b.count;
+    const g = b.gSum / b.count;
+    const bl = b.bSum / b.count;
+    return {
+      rgb: [r, g, bl],
+      lab: srgbToLab(r, g, bl),
       count: b.count,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, PALETTE_CANDIDATE_POOL);
+    };
+  });
 
-  if (candidates.length === 0) return [];
-  if (n <= 0) return [];
+  // Sort by frequency desc, take top pool. Outliers (single-pixel
+  // anti-aliased fringes etc.) sit at the tail and never get considered.
+  allCandidates.sort((a, b) => b.count - a.count);
+  const pool = allCandidates.slice(0, MAX_CANDIDATE_POOL);
 
-  // Farthest-first traversal. Seed with the most populous bucket so the
-  // first pick is grounded in the dominant color. Subsequent picks maximise
-  // their minimum distance to anything already picked (= maximally
-  // distinct).
-  const picked: Bucket[] = [candidates[0]];
+  if (pool.length <= n) {
+    // Image genuinely has fewer distinct colors than requested — return
+    // them all rather than padding with duplicates.
+    return pool.map((c) => rgbToHex(c.rgb));
+  }
 
-  while (picked.length < n && picked.length < candidates.length) {
+  // Pure farthest-first traversal in Lab. Seed with the most-populous
+  // candidate (= the dominant color of the image, a reasonable starting
+  // point). Subsequent picks maximize their MIN Lab distance to anything
+  // already picked — guaranteeing maximum perceptual spread.
+  const picked: Candidate[] = [pool[0]];
+  // Maintain "current min distance to picked" per pool entry so we don't
+  // recompute from scratch each iteration.
+  const minDistSquared = pool.map((c) =>
+    c === pool[0] ? -1 : labDistSquared(c.lab, pool[0].lab),
+  );
+
+  while (picked.length < n) {
     let bestIdx = -1;
-    let bestMinDist = -1;
-    for (let i = 0; i < candidates.length; i++) {
-      const cand = candidates[i];
-      if (picked.includes(cand)) continue;
-      let minDist = Infinity;
-      for (const p of picked) {
-        const d = rgbDistSquared(cand.color, p.color);
-        if (d < minDist) minDist = d;
-      }
-      // Strict inequality so we deterministically prefer the higher-frequency
-      // candidate when distances tie (candidates are sorted by frequency desc,
-      // so the first one encountered wins).
-      if (minDist > bestMinDist) {
-        bestMinDist = minDist;
+    let bestDist = -1;
+    for (let i = 0; i < pool.length; i++) {
+      if (minDistSquared[i] < 0) continue; // already picked
+      if (minDistSquared[i] > bestDist) {
+        bestDist = minDistSquared[i];
         bestIdx = i;
       }
     }
     if (bestIdx === -1) break;
-    picked.push(candidates[bestIdx]);
+    const newCentre = pool[bestIdx];
+    picked.push(newCentre);
+    // Mark picked + update min distances for the rest.
+    minDistSquared[bestIdx] = -1;
+    for (let i = 0; i < pool.length; i++) {
+      if (minDistSquared[i] < 0) continue;
+      const d = labDistSquared(pool[i].lab, newCentre.lab);
+      if (d < minDistSquared[i]) minDistSquared[i] = d;
+    }
   }
 
-  return picked.map((b) => rgbToHex(b.color));
+  return picked.map((c) => rgbToHex(c.rgb));
 }
 
 /**
@@ -539,19 +587,24 @@ function boardFromImage(
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cols, rows);
   const data = ctx.getImageData(0, 0, cols, rows).data;
 
-  const paletteRgb = palette.map(hexToRgb);
+  // Convert palette to Lab so quantization uses the same perceptual metric
+  // the palette extraction did.
+  const paletteLab = palette.map((hex) => {
+    const [r, g, b] = hexToRgb(hex);
+    return srgbToLab(r, g, b);
+  });
   const board: Board = Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => null as Color),
   );
 
-  // Per-cell original pixel — used both during run-length-aware quantization
+  // Per-cell original Lab — used both during run-length-aware quantization
   // (to score candidate palette colors) and during the post-step where we
   // null the *worst-matching* cells of any over-count color.
-  const pixels: Array<[number, number, number]> = new Array(rows * cols);
+  const cellLab: Array<[number, number, number]> = new Array(rows * cols);
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const i = (r * cols + c) * 4;
-      pixels[r * cols + c] = [data[i], data[i + 1], data[i + 2]];
+      cellLab[r * cols + c] = srgbToLab(data[i], data[i + 1], data[i + 2]);
     }
   }
 
@@ -567,9 +620,9 @@ function boardFromImage(
   // ----- step 1: greedy quantization with run-length cap of 3 -----
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const pixel = pixels[r * cols + c];
-      const order = paletteRgb
-        .map((p, idx) => ({ idx, dist: rgbDistSquared(pixel, p) }))
+      const lab = cellLab[r * cols + c];
+      const order = paletteLab
+        .map((p, idx) => ({ idx, dist: labDistSquared(lab, p) }))
         .sort((a, b) => a.dist - b.dist);
 
       let chosenIdx = order[0].idx;
@@ -584,10 +637,10 @@ function boardFromImage(
   }
 
   // ----- step 2: balance color counts to multiples of 4 -----
-  // Group the cells of each color, sort by "worst match" (largest distance
-  // from cell pixel to its assigned color), and null the surplus. Nulling
-  // can only shorten existing runs, so the run-length invariant from step 1
-  // is preserved.
+  // Group the cells of each color, sort by "worst match" (largest Lab
+  // distance from cell to its assigned color), and null the surplus.
+  // Nulling can only shorten existing runs, so the run-length invariant
+  // from step 1 is preserved.
   type AssignedCell = { r: number; c: number; dist: number };
   const cellsByColor = new Map<string, AssignedCell[]>();
   for (let r = 0; r < rows; r++) {
@@ -595,22 +648,17 @@ function boardFromImage(
       const color = board[r][c];
       if (!color) continue;
       const pIdx = palette.indexOf(color);
-      const dist = pIdx === -1 ? 0 : rgbDistSquared(pixels[r * cols + c], paletteRgb[pIdx]);
+      const dist =
+        pIdx === -1 ? 0 : labDistSquared(cellLab[r * cols + c], paletteLab[pIdx]);
       const list = cellsByColor.get(color);
       if (list) list.push({ r, c, dist });
       else cellsByColor.set(color, [{ r, c, dist }]);
     }
   }
 
-  for (const [color, cells] of cellsByColor) {
+  for (const cells of cellsByColor.values()) {
     const count = cells.length;
-    let surplus: number;
-    if (count < 4) {
-      // Color can't survive — null all its cells.
-      surplus = count;
-    } else {
-      surplus = count % 4;
-    }
+    const surplus = count < 4 ? count : count % 4;
     if (surplus === 0) continue;
     // Worst-matching cells go first, so the visible image stays as close as
     // possible to the source.
@@ -619,9 +667,6 @@ function boardFromImage(
       const { r, c } = cells[i];
       board[r][c] = null;
     }
-    // Keep the map consistent in case we ever extend this to multiple
-    // passes — strictly cosmetic right now.
-    void color;
   }
 
   return board;
@@ -637,18 +682,46 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 function rgbToHex([r, g, b]: [number, number, number]): string {
-  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  const clamp255 = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+  const toHex = (n: number) => clamp255(n).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-function rgbDistSquared(
+function labDistSquared(
   a: [number, number, number],
   b: [number, number, number],
 ): number {
-  const dr = a[0] - b[0];
-  const dg = a[1] - b[1];
+  const dl = a[0] - b[0];
+  const da = a[1] - b[1];
   const db = a[2] - b[2];
-  return dr * dr + dg * dg + db * db;
+  return dl * dl + da * da + db * db;
+}
+
+// ---------- sRGB ↔ CIE Lab (D65, sRGB linearization) ----------
+
+const LAB_EPSILON = 0.008856; // (6/29)^3
+const LAB_KAPPA = 7.787;
+
+function srgbChannelToLinear(c: number): number {
+  const n = c / 255;
+  return n <= 0.04045 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+}
+
+function srgbToLab(r: number, g: number, b: number): [number, number, number] {
+  const lr = srgbChannelToLinear(r);
+  const lg = srgbChannelToLinear(g);
+  const lb = srgbChannelToLinear(b);
+
+  // Linear sRGB → XYZ (D65 reference white)
+  const x = (lr * 0.4124564 + lg * 0.3575761 + lb * 0.1804375) / 0.95047;
+  const y = (lr * 0.2126729 + lg * 0.7151522 + lb * 0.0721750) / 1.0;
+  const z = (lr * 0.0193339 + lg * 0.1191920 + lb * 0.9503041) / 1.08883;
+
+  const fx = x > LAB_EPSILON ? Math.cbrt(x) : LAB_KAPPA * x + 16 / 116;
+  const fy = y > LAB_EPSILON ? Math.cbrt(y) : LAB_KAPPA * y + 16 / 116;
+  const fz = z > LAB_EPSILON ? Math.cbrt(z) : LAB_KAPPA * z + 16 / 116;
+
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
 /**

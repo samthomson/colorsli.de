@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eraser, ImageIcon, Music2, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
@@ -373,28 +372,41 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
                 </ul>
               )}
             </div>
-
-            <Button
-              onClick={onPublish}
-              disabled={!canPublish || isPending}
-              className="arcade-label w-full gap-2 text-xs"
-              size="lg"
-            >
-              <Save className="h-4 w-4" />
-              {isPending
-                ? (isEdit ? 'Updating...' : 'Publishing...')
-                : (isEdit ? 'Update level' : 'Publish level')}
-            </Button>
-            {!canPublish && (
-              <p className="arcade-label text-center text-[10px] text-slate-500">
-                {trimmedTitle.length === 0
-                  ? `Add a title to ${isEdit ? 'update' : 'publish'}.`
-                  : !youtubeValid
-                    ? `Fix the YouTube URL to ${isEdit ? 'update' : 'publish'}.`
-                    : `Fix validation errors to enable ${isEdit ? 'updating' : 'publishing'}.`}
-              </p>
-            )}
           </div>
+        </div>
+
+        {/* Footer CTA: validation hint on the left, big arcade publish on
+            the right. Disabled state keeps the button visible but mutes
+            interaction so layout doesn't jump as the form becomes valid. */}
+        <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-slate-200/70 pt-5 sm:flex-row sm:items-center">
+          <p
+            className={cn(
+              'arcade-label text-[10px] text-slate-500',
+              canPublish && 'invisible',
+            )}
+          >
+            {trimmedTitle.length === 0
+              ? `Add a title to ${isEdit ? 'update' : 'publish'}.`
+              : !youtubeValid
+                ? `Fix the YouTube URL to ${isEdit ? 'update' : 'publish'}.`
+                : `Fix validation errors to enable ${isEdit ? 'updating' : 'publishing'}.`}
+          </p>
+          <ArcadePill
+            tone="emerald"
+            size="lg"
+            onClick={onPublish}
+            className={cn(
+              'self-end',
+              (!canPublish || isPending) && 'pointer-events-none opacity-50',
+            )}
+          >
+            <ArcadePillIcon tone="emerald" size="lg">
+              <Save className={arcadePillIconSize('lg')} />
+            </ArcadePillIcon>
+            {isPending
+              ? (isEdit ? 'Updating...' : 'Publishing...')
+              : (isEdit ? 'Update level' : 'Publish level')}
+          </ArcadePill>
         </div>
       </CardContent>
     </Card>
