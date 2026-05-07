@@ -7,11 +7,13 @@ import { InferSeoMetaPlugin } from 'unhead/plugins';
 import { Suspense } from 'react';
 import NostrProvider from '@/components/NostrProvider';
 import { NostrSync } from '@/components/NostrSync';
+import { PendingEventsProvider } from '@/components/PendingEventsProvider';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
+import { buildActiveRelayList } from '@/lib/constants';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -33,29 +35,35 @@ const queryClient = new QueryClient({
 const defaultConfig: AppConfig = {
   theme: "light",
   relayMetadata: {
-    relays: [
-      { url: 'wss://relay.ditto.pub', read: true, write: true },
-      { url: 'wss://relay.primal.net', read: true, write: true },
-      { url: 'wss://relay.damus.io', read: true, write: true },
-    ],
+    // Driven from src/lib/constants.ts so dev (private relay) and prod
+    // (public relays) are toggled by import.meta.env.DEV in one place.
+    relays: buildActiveRelayList(),
     updatedAt: 0,
   },
+  publishCompletions: true,
 };
+
+// Bump this key whenever the shape or default of AppConfig changes in a way
+// that should invalidate any stored client copies (e.g. flipping the dev
+// relay set, schema changes). See AGENTS.md "No migrations" rule.
+const APP_CONFIG_STORAGE_KEY = "nostr:app-config:v4";
 
 export function App() {
   return (
     <UnheadProvider head={head}>
-      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig}>
+      <AppProvider storageKey={APP_CONFIG_STORAGE_KEY} defaultConfig={defaultConfig}>
         <QueryClientProvider client={queryClient}>
           <NostrLoginProvider storageKey='nostr:login'>
             <NostrProvider>
               <NostrSync />
-              <TooltipProvider>
-                <Toaster />
-                <Suspense>
-                  <AppRouter />
-                </Suspense>
-              </TooltipProvider>
+              <PendingEventsProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Suspense>
+                    <AppRouter />
+                  </Suspense>
+                </TooltipProvider>
+              </PendingEventsProvider>
             </NostrProvider>
           </NostrLoginProvider>
         </QueryClientProvider>

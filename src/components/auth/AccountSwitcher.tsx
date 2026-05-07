@@ -1,4 +1,5 @@
 import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
+import { ArcadePill } from '@/components/ArcadePill';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,13 +27,19 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className='flex items-center gap-2 h-10 p-1 pr-2.5 rounded-full hover:bg-accent transition-all text-foreground'>
-          <Avatar className='w-8 h-8'>
+        <ArcadePill
+          tone="emerald"
+          size="sm"
+          bob={false}
+          aria-label={`Account: ${getDisplayName(currentUser)}`}
+          className="!gap-1.5 !p-1 !pr-2"
+        >
+          <Avatar className="h-7 w-7 ring-2 ring-white/90">
             <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
             <AvatarFallback>{getDisplayName(currentUser).charAt(0)}</AvatarFallback>
           </Avatar>
-          <ChevronDown className='w-4 h-4 text-muted-foreground' />
-        </button>
+          <ChevronDown className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]" />
+        </ArcadePill>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-56 p-2 animate-scale-in'>
         <div className='font-medium text-sm px-2 py-1.5'>Switch Account</div>

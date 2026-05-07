@@ -14,6 +14,12 @@ export interface AppConfig {
   theme: Theme;
   /** NIP-65 relay list metadata */
   relayMetadata: RelayMetadata;
+  /**
+   * Color Slide: when true, completing a level publishes a public kind-1
+   * completion event in addition to updating the private save game.
+   * Defaults true. Toggled from the post-completion modal.
+   */
+  publishCompletions: boolean;
 }
 
 export interface AppContextType {

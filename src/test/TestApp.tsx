@@ -28,6 +28,7 @@ export function TestApp({ children }: TestAppProps) {
       ],
       updatedAt: 0,
     },
+    publishCompletions: true,
   };
 
   return (

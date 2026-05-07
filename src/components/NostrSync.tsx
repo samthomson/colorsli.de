@@ -17,6 +17,9 @@ export function NostrSync() {
 
   useEffect(() => {
     if (!user) return;
+    // Dev mode: relay set is locked to src/lib/constants.ts. Skip NIP-65 sync
+    // so the user's published relay list can never override the dev relays.
+    if (import.meta.env.DEV) return;
 
     const syncRelaysFromNostr = async () => {
       try {

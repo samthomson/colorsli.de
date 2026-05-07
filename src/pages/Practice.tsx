@@ -5,11 +5,11 @@ import { ColourSlideGame } from '@/components/ColourSlideGame';
 const Practice = () => {
   useSeoMeta({
     title: 'Color Slide - Practice',
-    description: 'Practice specific mechanics and improve your Color Slide strategy.',
+    description: 'Warm up on randomly generated boards.',
   });
 
   return (
-    <Template pageName="Practice" subtitle="Slide rows and columns to make exact groups of four.">
+    <Template pageName="Practice" subtitle="Random boards. No saving, no scoring — just play.">
       <div className="flex justify-center">
         <ColourSlideGame />
       </div>

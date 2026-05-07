@@ -2,6 +2,23 @@
 
 This project is a Nostr client application built with React 19.x, TailwindCSS 4.x, Vite, shadcn/ui, and Nostrify.
 
+## Communication style: be terse
+
+Default to **short**. The user is fast and would rather ask a follow-up than read a report.
+
+- No preambles ("Got it.", "Sure!", "Here's what I'll do."). Just do it.
+- No recaps of what you just changed unless the user asks. The diff speaks for itself.
+- No "summary" sections after a task. Stop when done.
+- No re-explaining things the user already understands (their own code, their own request, basic web/Nostr concepts).
+- Prefer compact formats: terse bullets, tables, short code refs over prose paragraphs.
+- Drop softeners and hedges ("you might want to consider", "it could be useful"). Say what you mean.
+- Cut filler adverbs/adjectives.
+- For "how do I X" questions, answer in numbered steps with one line each. No tutorial paragraphs.
+- Code blocks > prose when the answer is code.
+- One short closing sentence is fine; multi-paragraph wrap-ups are not.
+
+When information is genuinely complex, use depth — but the bar for length is "the user could not have understood without it", not "this is interesting".
+
 ## Technology Stack
 
 - **React 19.x**: hooks, concurrent rendering, ref-as-prop
@@ -331,6 +348,27 @@ For font installation, color-scheme changes, light/dark theming, or the `isolate
 **Running the existing test script — always do it.** After any code change, run the project's test/validation script. **Your task is not complete until it passes.** The script typically covers TypeScript compilation, ESLint, and existing tests.
 
 **Writing new test files — don't, unless the user asks.** If the user explicitly requests tests, describes a bug to diagnose with a test, or reports that a problem persists after a fix, load the **`testing`** skill for the project's Vitest + `TestApp` setup and policy.
+
+## No migrations, no backwards-compat code
+
+This project is **pre-launch**. There are no existing users, no production
+data, no published versions to be compatible with. The relays we hit in dev
+are throwaway.
+
+- Do **not** write data-migration code (e.g. "if old format exists, convert
+  to new").
+- Do **not** add fallback branches for "old shape" of localStorage values,
+  Nostr event content, or app config.
+- Do **not** wrap new fields in `if (typeof x === 'undefined')` guards just
+  to handle absence in legacy data.
+- Do **not** propose migration steps when introducing or changing schemas
+  (event kinds, tag conventions, encrypted payloads, storage keys, etc.).
+- When changing a storage key, just change it. When changing an event
+  schema, just change it.
+
+If a real migration is ever needed (post-launch, real users), the user will
+explicitly ask for one. Until then, default to the simplest forward-only
+implementation.
 
 ## Validating Your Changes
 

@@ -77,7 +77,11 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
       return [...allRelays];
     },
-    eoseTimeout: 200,
+    // Time the pool waits after sending REQ before giving up on EOSE for a
+    // relay. 200ms was too tight on cold loads — opening a fresh WebSocket
+    // (DNS + TLS + handshake) ate most of that, so queries silently returned
+    // empty results before any events arrived.
+    eoseTimeout: 3000,
   }));
 
   // Derive the current signer from the active login. This mirrors the

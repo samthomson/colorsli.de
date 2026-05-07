@@ -1,0 +1,179 @@
+# Color Slide custom Nostr schema
+
+This document defines the Nostr event schemas used by the
+[Color Slide](https://colorsli.de) client.
+
+All events carry a `t` tag with value `colorslide` so they can be filtered at
+the relay level alongside type-specific tags.
+
+---
+
+## Kind 7283 — Color Slide level (regular, immutable)
+
+A user-published puzzle. Once published the level is treated as immutable:
+the event id is the level id, and gameplay results reference it by `e` tag.
+
+### Tags
+
+- `["t", "colorslide"]` — required, top-level filter.
+- `["t", "colorslide-level"]` — required, identifies the event as a level.
+- `["title", "<level title>"]` — required, plain text, max 64 chars.
+- `["rows", "<n>"]` — number of rows in the board (string-encoded integer).
+- `["cols", "<n>"]` — number of columns in the board.
+- `["alt", "Color Slide level: <title> (play at https://colorsli.de)"]` — required
+  NIP-31 alt text for clients that don't understand this kind.
+- `["youtube", "<url>"]` — optional. A YouTube video URL whose audio plays
+  in the background while the level is being played (loops indefinitely). The
+  client validates the URL against a strict YouTube id regex before embedding
+  and only uses the extracted video id, never the raw URL.
+
+### Content
+
+Stringified JSON with a single `board` field — a 2D array of
+`(string | null)` cells, where strings are CSS hex colors (e.g. `"#ef4444"`)
+and `null` represents an empty cell.
+
+```json
+{
+  "board": [
+    ["#ef4444", "#3b82f6", null, "#10b981"],
+    ["#ef4444", "#3b82f6", "#10b981", "#10b981"],
+    ["#ef4444", "#3b82f6", "#10b981", null],
+    ["#ef4444", "#3b82f6", null, null]
+  ]
+}
+```
+
+### Validation rules (enforced by the editor before publish)
+
+1. Each non-null color must appear in a multiple of 4 cells.
+2. No row or column may contain a run of 5+ identical colors.
+3. At least one colored cell must be present.
+
+Clients SHOULD re-validate on read and ignore boards that fail.
+
+---
+
+## Kind 30888 — Official Color Slide progression list (addressable, replaceable)
+
+Curates the level progression shown on the Practice page. Only events authored
+by trusted admin pubkeys (configured in `src/lib/admin.ts`) are honoured by the
+client; any other publisher is ignored.
+
+### Tags
+
+- `["d", "official-levels"]` — required, identifies the list. Always this exact value.
+- `["t", "colorslide"]` — required.
+- `["e", "<level event id>", "", "level"]` — one per level, in **play order**.
+- `["alt", "Color Slide official level progression (https://colorsli.de)"]` —
+  required NIP-31 alt text.
+
+### Content
+
+Empty string. All payload lives in tags so the relay can index changes.
+
+### Trust model
+
+`useOfficialLevels` queries `kind: 30888` filtered by `authors:
+ADMIN_PUBKEYS` and `#d: ['official-levels']`. The d-tag alone is NOT a trust
+boundary — anyone can publish an addressable event with the same d-tag.
+
+---
+
+## Kind 1 — Color Slide completion (optional, public)
+
+Standard text note that doubles as a leaderboard entry. Uses kind 1 (rather
+than a custom kind) so the completion shows up in any generic Nostr feed
+reader as a human-readable result, while structured tags allow the leaderboard
+hooks to aggregate scores at the relay level.
+
+**This event is optional.** It is published only when
+`AppConfig.publishCompletions` is true (default true, toggleable from the
+post-completion modal). Whether or not the kind-1 event is published, the
+player's *private* save game (kind 30078, see below) is always updated so
+sequential unlocking continues to work and progress is preserved across
+devices.
+
+Players who opt out simply do not appear on the leaderboard.
+
+### Required tags
+
+- `["t", "colorslide"]`
+- `["t", "colorslide-completion"]`
+- `["e", "<level event id>", "", "level"]` — the level cleared.
+- `["score", "<n>"]` — integer score, see `src/lib/scoring.ts`.
+- `["time", "<seconds>"]` — wall-clock seconds spent on the level.
+- `["moves", "<n>"]` — slide moves used.
+- `["r", "https://colorsli.de"]` — reference to the game.
+
+### Content
+
+Human-readable summary, e.g.:
+
+```
+Cleared "Sunrise" in Color Slide -> 8420 pts, 1:32, 28 moves. Play at https://colorsli.de
+```
+
+### Trust caveat
+
+Anyone can publish a kind 1 with these tags claiming any score. v1 of Color
+Slide treats the network as authoritative; future versions may add a trusted
+scorer pubkey set or proof-of-play challenge events.
+
+---
+
+## Kind 30078 — Color Slide save game (NIP-78, addressable, encrypted)
+
+Per-user "save file" that records which levels the player has cleared. Drives
+the sequential unlock logic in `/practice` and persists progress across
+devices independently of the public leaderboard.
+
+The event itself is public (anyone can see "this user has a Color Slide save
+game") but the `content` payload is NIP-44 ciphertext encrypted to the user's
+own pubkey, so the actual list of cleared levels is unreadable without the
+user's nsec.
+
+### Tags
+
+- `["d", "colorslide-progress"]` — required, identifies this NIP-78 slot.
+  Always this exact value.
+- `["t", "colorslide"]`
+- `["alt", "Color Slide saved progress (encrypted, https://colorsli.de)"]`
+
+### Content
+
+NIP-44 ciphertext (encrypted with `peer = self.pubkey`) of the JSON:
+
+```json
+{
+  "version": 1,
+  "completed": ["<level event id>", "<level event id>", "..."]
+}
+```
+
+`completed` is an unordered, de-duplicated list of kind-7283 level event ids
+the player has cleared at least once. There are intentionally no scores or
+timestamps here — kind-1 completions are the source of truth for any
+leaderboard / personal-best display.
+
+### Replacement semantics
+
+Standard NIP-78 replaceability: only the most recent event per
+`(pubkey, kind, d)` is retained. The client reads the latest event, decrypts
+it, merges in the new completion id, encrypts the result, and republishes.
+
+### Failure handling
+
+Any publish failure (sign rejection, relay timeout) lands in the in-app
+"pending events" queue, which persists to localStorage and offers a one-click
+retry. This applies to every Nostr write the client makes — completions,
+levels, official-list edits, and save-game updates alike.
+
+---
+
+## Relay configuration
+
+The client reads/writes to a single set of relays defined in
+`src/lib/constants.ts`. In development this is a single private relay so
+in-progress content stays scoped; in production it uses a public relay set.
+Switching between the two is automatic based on `import.meta.env.DEV`.
