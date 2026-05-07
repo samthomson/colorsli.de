@@ -5,8 +5,11 @@
  * - A board is a 2D array of color hex strings or `null` (empty cell).
  * - A "match" is exactly 4 same-colored cells in a row or column. Runs of 5+
  *   are blocked (never clear) and shown to the player as warnings.
- * - A level is "valid" iff every non-null color count is divisible by 4 AND
- *   there are no 5+ runs in any row/column.
+ * - A *starting* board is "valid" iff every non-null color count is divisible
+ *   by 4 AND there are no runs of 4 or more in any row/column. Pre-existing
+ *   4-runs would auto-clear on the player's first move; pre-existing 5+ runs
+ *   are permanently blocked. Neither belongs in a starting position — the
+ *   maximum allowed run length on a starting board is 3.
  */
 
 export type Color = string | null;
@@ -64,11 +67,16 @@ export function hasAnyFourInARow(board: Board): boolean {
   return false;
 }
 
-/** Cells that are part of a 5+ in-a-row run (horizontal or vertical). */
-export function checkBlocked(board: Board): Cell[] {
-  const blocked: Cell[] = [];
+/**
+ * Cells that are part of a same-color run of `minRun` or more cells
+ * (horizontal or vertical). De-duplication: a single run is reported as
+ * `count` separate cells, but runs in different orientations crossing the
+ * same cell will produce duplicates — callers that care can dedupe.
+ */
+export function checkRunsAtLeast(board: Board, minRun: number): Cell[] {
+  const result: Cell[] = [];
   const rows = board.length;
-  if (rows === 0) return blocked;
+  if (rows === 0) return result;
   const cols = board[0].length;
 
   for (let row = 0; row < rows; row++) {
@@ -80,8 +88,8 @@ export function checkBlocked(board: Board): Cell[] {
       if (color === cur && color !== null) {
         count++;
       } else {
-        if (count >= 5 && cur !== null) {
-          for (let i = startCol; i < startCol + count; i++) blocked.push({ row, col: i });
+        if (count >= minRun && cur !== null) {
+          for (let i = startCol; i < startCol + count; i++) result.push({ row, col: i });
         }
         cur = color;
         count = 1;
@@ -99,8 +107,8 @@ export function checkBlocked(board: Board): Cell[] {
       if (color === cur && color !== null) {
         count++;
       } else {
-        if (count >= 5 && cur !== null) {
-          for (let i = startRow; i < startRow + count; i++) blocked.push({ row: i, col });
+        if (count >= minRun && cur !== null) {
+          for (let i = startRow; i < startRow + count; i++) result.push({ row: i, col });
         }
         cur = color;
         count = 1;
@@ -109,7 +117,17 @@ export function checkBlocked(board: Board): Cell[] {
     }
   }
 
-  return blocked;
+  return result;
+}
+
+/**
+ * Cells that are part of a 5+ in-a-row run. This is the *runtime* warning
+ * surfaced during play (those cells can never clear because clears require
+ * exact 4-runs). For starting-board / publishability checks, use
+ * `validateLevel` which is stricter (no 4-runs either).
+ */
+export function checkBlocked(board: Board): Cell[] {
+  return checkRunsAtLeast(board, 5);
 }
 
 /** Cells in exact 4-runs (horizontal or vertical). De-duplicated across overlaps. */
@@ -175,7 +193,11 @@ export function isGameComplete(board: Board): boolean {
 }
 
 export type LevelValidation = {
-  /** Cells that are part of a 5+ run; level cannot be published while non-empty. */
+  /**
+   * Cells that are part of a run of 4 or more — the maximum allowed run on a
+   * starting board is 3 (a 4-run would auto-clear on first slide; a 5+ run
+   * would be permanently blocked). Level cannot be published while non-empty.
+   */
   blockedCells: Cell[];
   /** Per-color cell counts, only for non-null cells. */
   colorCounts: Record<string, number>;
@@ -186,7 +208,9 @@ export type LevelValidation = {
 };
 
 export function validateLevel(board: Board): LevelValidation {
-  const blockedCells = checkBlocked(board);
+  // Stricter than the runtime `checkBlocked` (which only flags 5+): for
+  // starting-board validation, any run of 4 or more is an issue.
+  const blockedCells = checkRunsAtLeast(board, 4);
   const colorCounts: Record<string, number> = {};
   let totalColored = 0;
 

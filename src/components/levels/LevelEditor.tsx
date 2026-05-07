@@ -1,9 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eraser, Minus, Music2, Plus, Save } from 'lucide-react';
+import { Eraser, ImageIcon, Music2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
+import { ImageToBoardDialog } from '@/components/levels/ImageToBoardDialog';
+import { Stepper } from '@/components/levels/Stepper';
 import { useToast } from '@/hooks/useToast';
 import { usePublishLevel } from '@/hooks/usePublishLevel';
 import { cn } from '@/lib/utils';
@@ -12,7 +15,7 @@ import { extractYouTubeId } from '@/lib/youtube';
 import type { ParsedLevel } from '@/lib/levelEvent';
 
 const MIN_DIM = 4;
-const MAX_DIM = 12;
+const MAX_DIM = 80;
 const DEFAULT_DIM = 6;
 
 type LevelEditorProps = {
@@ -48,6 +51,35 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
   const [board, setBoard] = useState<Board>(
     () => initial?.board ?? emptyBoard(DEFAULT_DIM, DEFAULT_DIM),
   );
+  // Painting palette is dynamic: starts as COLORS plus any non-default
+  // colors already present in the initial board (so editing an
+  // image-generated level still has the right brushes available). New
+  // colors get appended via `addPaletteColors` (e.g. when the user imports
+  // another image) but never auto-removed — once added, they stay
+  // available even if the user paints over every instance.
+  const [extraColors, setExtraColors] = useState<string[]>(() => {
+    if (!initial?.board) return [];
+    const known = new Set<string>(COLORS);
+    const found = new Set<string>();
+    for (const row of initial.board) {
+      for (const cell of row) {
+        if (cell !== null && !known.has(cell)) found.add(cell);
+      }
+    }
+    return Array.from(found);
+  });
+  const palette = useMemo<string[]>(
+    () => [...COLORS, ...extraColors],
+    [extraColors],
+  );
+  const addPaletteColors = (next: string[]) => {
+    const known = new Set<string>(COLORS);
+    setExtraColors((prev) => {
+      const merged = new Set<string>(prev);
+      for (const c of next) if (!known.has(c)) merged.add(c);
+      return Array.from(merged);
+    });
+  };
   const [activeColor, setActiveColor] = useState<Color>(COLORS[0]);
   // The first cell pressed in a stroke determines the action for the whole
   // stroke, so dragging stays consistent:
@@ -141,7 +173,10 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
     }
   };
 
-  const cellSizePx = Math.min(48, Math.floor(360 / Math.max(cols, 1)));
+  // Scales: tiny boards get chunky cells (cap at 48px), huge boards (up to
+  // 80 cols) get tiny cells but stay above a minimum so they're still
+  // clickable. The 720px budget is roughly the editor card's content width.
+  const cellSizePx = Math.max(6, Math.min(48, Math.floor(720 / Math.max(cols, 1))));
 
   return (
     <Card className="w-full shadow-2xl">
@@ -152,7 +187,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
         <p className="arcade-label text-[10px] tracking-[0.18em] text-muted-foreground">
           {isEdit
             ? 'Update this level. Republishing replaces the previous revision so existing unlocks and leaderboard entries carry over.'
-            : 'Paint colored cells to design a level. Each color must appear in groups of 4 (no exact 5+ runs). Publish to share with the community.'}
+            : 'Paint colored cells to design a level. Each color must appear in multiples of 4, and no row/column may contain 4+ same-color cells in a row. Publish to share with the community.'}
         </p>
       </CardHeader>
 
@@ -200,10 +235,31 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
           </div>
         </div>
 
+        <div className="flex justify-center">
+          <ImageToBoardDialog
+            minDim={MIN_DIM}
+            maxDim={MAX_DIM}
+            onApply={({ rows: r, cols: c, board: nextBoard, palette: nextPalette }) => {
+              setRows(r);
+              setCols(c);
+              setBoard(nextBoard);
+              addPaletteColors(nextPalette);
+            }}
+            trigger={
+              <ArcadePill tone="indigo" size="sm">
+                <ArcadePillIcon tone="indigo" size="sm">
+                  <ImageIcon className={arcadePillIconSize('sm')} />
+                </ArcadePillIcon>
+                Generate from image
+              </ArcadePill>
+            }
+          />
+        </div>
+
         <div>
           <p className="arcade-label mb-2 text-[11px] text-slate-600">Palette</p>
           <div className="flex flex-wrap items-center gap-2">
-            {COLORS.map(color => (
+            {palette.map(color => (
               <button
                 key={color}
                 type="button"
@@ -240,7 +296,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
           <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/20 dark:text-red-400">
             <span className="text-lg font-bold">!</span>
             <p className="arcade-label text-[11px]">
-              5+ in a row detected — colors must form exact groups of 4.
+              4+ in a row detected — max run on a starting board is 3 (4-runs auto-clear, 5+ runs are blocked).
             </p>
           </div>
         )}
@@ -345,45 +401,3 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
   );
 }
 
-function Stepper({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="rounded-md border border-slate-200 px-3 py-2">
-      <p className="arcade-label text-[11px] text-slate-500">{label}</p>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          disabled={value <= min}
-          aria-label={`Decrease ${label.toLowerCase()}`}
-        >
-          <Minus className="h-4 w-4" />
-        </Button>
-        <span className="min-w-[2ch] text-center text-base font-bold text-slate-900">{value}</span>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onChange(Math.min(max, value + 1))}
-          disabled={value >= max}
-          aria-label={`Increase ${label.toLowerCase()}`}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}

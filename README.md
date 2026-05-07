@@ -70,11 +70,15 @@ whatever. it's open source.
 
 ## ✅ TODO
 
-- [ ] a bunch of levels (where one unlocks the next)
+verify:
+- [ ] browse others levels
+- [ ] publish score / level completion
+
 - [ ] level editor
 - [ ] Add color themes
 - [ ] Add sound effects
 - [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
+
 - [ ] level ideas
   - [ ] 60s; color changing
   - [ ] moving boards
@@ -84,19 +88,20 @@ whatever. it's open source.
   - [ ] yee haw / yee yaw; rotating in 3d puzzle plane, maybe not rotating but flipping 180 degrees up down, or left right every x seconds
   - [ ] kusama
   - [ ] tibetan theme
+
+special tiles:
+- [ ] eyes, which reveal other colors, until which they can't be cleared
+- [ ] color changing
+- [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
+
+
 - [ ] dm, private levels
-- [ ] level sound track?
-- [ ] browse others levels
 - [ ] scoring
-- [ ] publish score / level completion
 - [ ] zap a level author
 - [ ] espy color picker
 - [ ] funky favicon
-- [ ] eyes, which reveal other colors, until which they can't be cleared
-- [ ] color changing
 - [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
 - [ ] multilingual
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
-- [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
 - [ ] fork/edit, delete your own levels
 - [ ] emotional support blobbi
