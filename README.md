@@ -97,3 +97,6 @@ whatever. it's open source.
 - [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
 - [ ] multilingual
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
+- [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
+- [ ] fork/edit, delete your own levels
+- [ ] emotional support blobbi
