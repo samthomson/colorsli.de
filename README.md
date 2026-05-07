@@ -74,11 +74,6 @@ verify:
 - [ ] browse others levels
 - [ ] publish score / level completion
 
-- [ ] level editor
-- [ ] Add color themes
-- [ ] Add sound effects
-- [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
-
 - [ ] level ideas
   - [ ] 60s; color changing
   - [ ] moving boards
@@ -94,14 +89,18 @@ special tiles:
 - [ ] color changing
 - [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
 
-
+features:
+- [ ] level editor
+- [ ] espy color picker
+- [ ] Add color themes
+- [ ] Add sound effects
+- [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
 - [ ] dm, private levels
 - [ ] scoring
 - [ ] zap a level author
-- [ ] espy color picker
-- [ ] funky favicon
 - [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
 - [ ] multilingual
-- [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
 - [ ] fork/edit, delete your own levels
 - [ ] emotional support blobbi
+- [ ] funky favicon
+- [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?

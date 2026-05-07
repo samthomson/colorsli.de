@@ -142,9 +142,43 @@ export function ImageToBoardDialog({ minDim, maxDim, trigger, onApply }: Props) 
     handleOpenChange(false);
   };
 
-  const handleSizeChange = (v: number) => {
-    setRows(v);
-    setCols(v);
+  // The Size slider drives the *longer* dimension and scales the shorter to
+  // preserve the current aspect ratio. So if the image came in landscape and
+  // dragged rows/cols to (16, 11), bumping size to 24 gives (24, 17) — not
+  // (24, 24). To make a square board, the user nudges either stepper until
+  // rows == cols (then size moves both in lock).
+  const handleSizeChange = (newLonger: number) => {
+    const longer = Math.max(rows, cols);
+    const shorter = Math.min(rows, cols);
+    const ratio = longer === 0 ? 1 : shorter / longer;
+    const newShorter = Math.max(
+      minDim,
+      Math.min(maxDim, Math.round(newLonger * ratio)),
+    );
+    if (rows >= cols) {
+      setRows(newLonger);
+      setCols(newShorter);
+    } else {
+      setCols(newLonger);
+      setRows(newShorter);
+    }
+  };
+
+  // When a new image finishes decoding, default the board to the image's
+  // own aspect ratio (so a wide painting becomes a wide board, not square).
+  // The user can still override per-axis afterwards via the steppers.
+  const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImgEl(img);
+    const dims = aspectToBoardDims(
+      img.naturalWidth,
+      img.naturalHeight,
+      defaultSize,
+      minDim,
+      maxDim,
+    );
+    setRows(dims.rows);
+    setCols(dims.cols);
   };
 
   // The preview pane is up to ~620px wide on desktop; figure out a cell
@@ -195,7 +229,7 @@ export function ImageToBoardDialog({ minDim, maxDim, trigger, onApply }: Props) 
               <img
                 key={imgSrc}
                 src={imgSrc}
-                onLoad={(e) => setImgEl(e.currentTarget)}
+                onLoad={handleImgLoad}
                 className="hidden"
                 alt=""
               />
@@ -615,4 +649,34 @@ function rgbDistSquared(
   const dg = a[1] - b[1];
   const db = a[2] - b[2];
   return dr * dr + dg * dg + db * db;
+}
+
+/**
+ * Map an image's pixel aspect ratio to (rows, cols) for the board, with
+ * `longerDim` becoming the board's longer side. Both axes are clamped to
+ * `[minDim, maxDim]`. Square images return (longerDim, longerDim).
+ */
+function aspectToBoardDims(
+  imgW: number,
+  imgH: number,
+  longerDim: number,
+  minDim: number,
+  maxDim: number,
+): { rows: number; cols: number } {
+  if (imgW <= 0 || imgH <= 0) {
+    return { rows: longerDim, cols: longerDim };
+  }
+  const aspect = imgW / imgH; // > 1 = landscape, < 1 = portrait
+  let rows: number;
+  let cols: number;
+  if (aspect >= 1) {
+    cols = longerDim;
+    rows = Math.max(1, Math.round(longerDim / aspect));
+  } else {
+    rows = longerDim;
+    cols = Math.max(1, Math.round(longerDim * aspect));
+  }
+  rows = Math.max(minDim, Math.min(maxDim, rows));
+  cols = Math.max(minDim, Math.min(maxDim, cols));
+  return { rows, cols };
 }
