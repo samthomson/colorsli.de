@@ -105,3 +105,6 @@ features:
 - [ ] emotional support blobbi
 - [ ] funky favicon
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
+
+unsorted:
+- [ ] custom sounds, eg goldeneye sounds
