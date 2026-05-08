@@ -84,12 +84,14 @@ verify:
   - [ ] kusama
   - [ ] tibetan theme
 
-special tiles:
+special tiles / levels:
 - [ ] eyes, which reveal other colors, until which they can't be cleared
 - [ ] color changing
 - [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
+- [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
 
 features:
+- [ ] share a level
 - [ ] espy color picker
 - [ ] Add color themes
 - [ ] Add sound effects
@@ -97,7 +99,7 @@ features:
 - [ ] dm, private levels
 - [ ] scoring
 - [ ] zap a level author
-- [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
+
 - [ ] multilingual
 - [ ] fork/edit, delete your own levels
 - [ ] emotional support blobbi
