@@ -90,7 +90,6 @@ special tiles:
 - [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
 
 features:
-- [ ] level editor
 - [ ] espy color picker
 - [ ] Add color themes
 - [ ] Add sound effects
