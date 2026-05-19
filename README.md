@@ -6,17 +6,17 @@ A puzzle game where you slide rows and columns to match exactly 4 colors in a ro
 
 ## 🎮 How to Play
 
-1. **Drag to slide**: Click and drag any colored circle
+1. **Drag to slide**: Click and drag any tile
    - Drag **horizontally** to slide the entire row left/right
    - Drag **vertically** to slide the entire column up/down
-2. **Match 4 in a row**: Line up exactly 4 of the same color horizontally or vertically
-3. **Clear the board**: Match all colors to win!
+2. **Match 4 in a row**: Line up exactly 4 of the same tile horizontally or vertically
+3. **Clear the board**: Match every tile to win!
 
 ## 🎯 Game Rules (Hard Constraints)
 
 These rules are enforced in the code and MUST be maintained:
 
-- Every non-empty color count must be divisible by 4.
+- Every non-empty tile id count must be divisible by 4.
 - Only exact runs of 4 clear.
 - Fresh boards must start with no run of 4+.
 - Match clearing only happens on drag release.
@@ -69,6 +69,9 @@ whatever. it's open source.
 **Built with [Shakespeare](https://shakespeare.diy)** - AI-powered web development
 
 ## ✅ TODO
+
+bug?
+- [ ] quiting a level, somehow 'completes' it
 
 verify:
 - [ ] browse others levels
