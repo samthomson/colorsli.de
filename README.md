@@ -89,6 +89,7 @@ special tiles / levels:
 - [ ] color changing
 - [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
 - [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
+- [ ] countdown, where if you don't complete it time - you fail and have to restart
 
 features:
 - [ ] share a level
