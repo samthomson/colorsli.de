@@ -95,14 +95,14 @@ special tiles / levels:
 
 features:
 - [ ] share a level
-- [ ] espy color picker
-- [ ] Add color themes
 - [ ] Add sound effects
 - [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
-- [ ] dm, private levels
-- [ ] scoring
 - [ ] zap a level author
 - [ ] level designer: button to randomly fill the remainder
+- [ ] espy color picker
+- [ ] Add color themes
+- [ ] dm, private levels
+- [ ] scoring
 
 - [ ] multilingual
 - [ ] fork/edit, delete your own levels
