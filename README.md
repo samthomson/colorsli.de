@@ -70,11 +70,8 @@ whatever. it's open source.
 
 ## ✅ TODO
 
-bug?
-- [ ] quiting a level, somehow 'completes' it
 
 verify:
-- [ ] browse others levels
 - [ ] publish score / level completion
 
 - [ ] level ideas
@@ -116,3 +113,4 @@ features:
 unsorted:
 - [ ] custom sounds, eg goldeneye sounds
 - [ ] put my profile pic somewhere below but near the game, and add some wheels that spin when I slide, so its like I'm sliding things.
+- [ ] preload level list and discovery from teh start screen, so there's no loading later
