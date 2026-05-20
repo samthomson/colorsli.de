@@ -87,6 +87,7 @@ verify:
   - [ ] kusama
   - [ ] tibetan theme
   - [ ] matrix theme (custom tiles, weird matrix unicodes, green of course)
+  - [ ] emojis
 
 special tiles / levels:
 - [ ] eyes, which reveal other colors, until which they can't be cleared
