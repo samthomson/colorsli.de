@@ -1,17 +1,36 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eraser, ImageIcon, Music2, Save } from 'lucide-react';
+import { Eraser, Eye, ImageIcon, ImagePlus, Music2, Save, Sparkles, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
+import { TileSprite } from '@/components/TileSprite';
+import { AddEmojiTileDialog } from '@/components/levels/AddEmojiTileDialog';
+import { AddLogicTilesDialog } from '@/components/levels/AddLogicTilesDialog';
 import { ImageToBoardDialog } from '@/components/levels/ImageToBoardDialog';
 import { Stepper } from '@/components/levels/Stepper';
+import { TileLibraryDialog } from '@/components/levels/TileLibraryDialog';
 import { useToast } from '@/hooks/useToast';
+import { useUploadFile } from '@/hooks/useUploadFile';
 import { usePublishLevel } from '@/hooks/usePublishLevel';
+import { usePublishTile } from '@/hooks/usePublishTile';
 import { cn } from '@/lib/utils';
-import { COLORS, emptyBoard, validateLevel, type Board, type Color } from '@/lib/colorSlide';
+import { COLORS, emptyBoard, validateLevel, type Board } from '@/lib/colorSlide';
+import {
+  defaultColorTile,
+  imageTile,
+  matchKeyBoard,
+  tileBackgroundColor,
+  type TileId,
+  type TileKind,
+  type TilePalette,
+} from '@/lib/tile';
 import { extractYouTubeId } from '@/lib/youtube';
 import type { ParsedLevel } from '@/lib/levelEvent';
+
+/** Soft warning threshold: with more image cells than this, animated GIFs
+ * may noticeably impact frame rate during drag. Doesn't block publish. */
+const ANIMATED_PERF_WARN_THRESHOLD = 12;
 
 const MIN_DIM = 4;
 const MAX_DIM = 80;
@@ -32,9 +51,19 @@ type LevelEditorProps = {
  * `initial` is passed.
  *
  * - Adjust rows/cols with +/- steppers.
- * - Pick a color (or eraser) and click cells to paint.
- * - Live validation panel surfaces blocked cells (5+ runs) and color counts
+ * - Pick a tile (or eraser) and click cells to paint.
+ * - Live validation panel surfaces blocked cells (4+ runs) and tile counts
  *   that aren't multiples of 4. Publish is disabled until the level is valid.
+ *
+ * Tile model:
+ * - The painting palette is `TileKind[]`. Stage 1 only contains default
+ *   color tiles (one per `COLORS` entry plus any non-default hexes baked
+ *   into the loaded level / produced by the image dialog).
+ * - The board stores tile ids; for default color tiles id === hex string,
+ *   so legacy v1 boards are valid as-is.
+ * - On publish, the editor passes both the board AND the trimmed tile
+ *   palette to `usePublishLevel`. `buildLevelTemplate` strips unused
+ *   entries before emitting the kind-37283 event.
  */
 export function LevelEditor({ initial }: LevelEditorProps = {}) {
   const navigate = useNavigate();
@@ -50,48 +79,141 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
   const [board, setBoard] = useState<Board>(
     () => initial?.board ?? emptyBoard(DEFAULT_DIM, DEFAULT_DIM),
   );
-  // Painting palette is dynamic: starts as COLORS plus any non-default
-  // colors already present in the initial board (so editing an
-  // image-generated level still has the right brushes available). New
-  // colors get appended via `addPaletteColors` (e.g. when the user imports
-  // another image) but never auto-removed — once added, they stay
-  // available even if the user paints over every instance.
-  const [extraColors, setExtraColors] = useState<string[]>(() => {
-    if (!initial?.board) return [];
+
+  // Palette = the default colors PLUS any extra tiles baked in (from the
+  // loaded level, or from the image dialog). Default tiles get a stable
+  // identity per hex, so reloading an edit-mode level reuses the same
+  // brush slot the level was originally painted with.
+  const [extraTiles, setExtraTiles] = useState<TileKind[]>(() => {
     const known = new Set<string>(COLORS);
-    const found = new Set<string>();
-    for (const row of initial.board) {
-      for (const cell of row) {
-        if (cell !== null && !known.has(cell)) found.add(cell);
+    const extras = new Map<string, TileKind>();
+    if (initial?.tiles) {
+      for (const tile of Object.values(initial.tiles)) {
+        if (tile.sprite.type === 'color' && known.has(tile.sprite.value)) continue;
+        extras.set(tile.id, tile);
       }
     }
-    return Array.from(found);
+    return Array.from(extras.values());
   });
-  const palette = useMemo<string[]>(
-    () => [...COLORS, ...extraColors],
-    [extraColors],
+
+  const palette = useMemo<TileKind[]>(
+    () => [...COLORS.map(defaultColorTile), ...extraTiles],
+    [extraTiles],
   );
-  const addPaletteColors = (next: string[]) => {
+
+  // Quick lookup by id; used by the canvas, validation panel, and the
+  // publish step.
+  const tiles = useMemo<TilePalette>(() => {
+    const map: TilePalette = {};
+    for (const t of palette) map[t.id] = t;
+    return map;
+  }, [palette]);
+
+  /** Set of palette tile ids — drives the "already in palette" badge in
+   * the tile-library picker. */
+  const paletteIdSet = useMemo(() => new Set(palette.map((t) => t.id)), [palette]);
+
+  const addPaletteColors = (hexes: string[]) => {
     const known = new Set<string>(COLORS);
-    setExtraColors((prev) => {
-      const merged = new Set<string>(prev);
-      for (const c of next) if (!known.has(c)) merged.add(c);
-      return Array.from(merged);
+    setExtraTiles((prev) => {
+      const merged = new Map<string, TileKind>();
+      for (const t of prev) merged.set(t.id, t);
+      for (const hex of hexes) {
+        if (known.has(hex)) continue;
+        if (!merged.has(hex)) merged.set(hex, defaultColorTile(hex));
+      }
+      return Array.from(merged.values());
     });
   };
-  const [activeColor, setActiveColor] = useState<Color>(COLORS[0]);
+
+  const publishTile = usePublishTile();
+
+  /** Adds an arbitrary `TileKind` (image, emoji, special) to the palette
+   * if it's not already there, and selects it as the active brush so the
+   * user can paint with it immediately.
+   *
+   * Reusable sprite tiles (image / emoji) also get persisted to the
+   * user's library as a kind-37284 event so they can be picked from
+   * future levels. Fire-and-forget; library failures land in the
+   * pending-events queue and don't block the editor flow. Behavior tiles
+   * (treasure / hidden) and pure color tiles are skipped — neither
+   * makes sense as a stand-alone library entry.
+   */
+  const addCustomTile = (tile: TileKind) => {
+    setExtraTiles((prev) => {
+      if (prev.some((t) => t.id === tile.id)) return prev;
+      return [...prev, tile];
+    });
+    setActiveTile(tile);
+
+    // Only image tiles get library entries. Emojis are universal Unicode
+    // — no per-user data, infinite variety at zero cost; the editor's
+    // built-in emoji picker is enough. Color tiles are skipped for the
+    // same reason. Behavior tiles are level-scoped and never persisted.
+    const shouldPersist = !tile.behavior && tile.sprite.type === 'image';
+    if (shouldPersist) {
+      void publishTile(tile).catch((err) => {
+        console.error('tile library publish failed', err);
+      });
+    }
+  };
+
+  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const handleImageUpload = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Not an image',
+        description: 'Pick a PNG / JPG / GIF / WebP.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      const tags = await uploadFile(file);
+      const url = tags.find((t) => t[0] === 'url')?.[1];
+      const sha256 = tags.find((t) => t[0] === 'x')?.[1];
+      if (!url) throw new Error('Upload did not return a URL');
+      const tile = imageTile({ url, sha256, alt: file.name });
+      addCustomTile(tile);
+      toast({
+        title: 'Image tile added',
+        description: 'Click cells to paint with your new tile.',
+      });
+    } catch (err) {
+      console.error('image upload failed', err);
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const [activeTile, setActiveTile] = useState<TileKind | null>(palette[0] ?? null);
   // The first cell pressed in a stroke determines the action for the whole
   // stroke, so dragging stays consistent:
   //   - 'paint': set every dragged cell to `target` (works for the eraser too,
   //     since target=null means erase)
   //   - 'erase-same': clicking a cell that already matches the brush toggles
-  //     it off; only same-colored cells encountered during drag are erased.
+  //     it off; only same-id cells encountered during drag are erased.
   type StrokeAction =
-    | { mode: 'paint'; target: Color }
-    | { mode: 'erase-same'; target: string };
+    | { mode: 'paint'; target: TileId | null }
+    | { mode: 'erase-same'; target: TileId };
   const paintingRef = useRef<StrokeAction | null>(null);
 
-  const validation = useMemo(() => validateLevel(board), [board]);
+  // Project the board for run-length validation so future hidden tiles
+  // (stage 3) can never falsely trip the 4+-in-a-row check at start. Tile
+  // count validation runs on the raw board (every tile id, including
+  // hidden, must hit multiples of 4).
+  const projectedBoard = useMemo(
+    () => matchKeyBoard(board, tiles, new Set<string>()),
+    [board, tiles],
+  );
+  const validation = useMemo(
+    () => validateLevel(board, projectedBoard),
+    [board, projectedBoard],
+  );
   const trimmedTitle = title.trim();
   const trimmedYoutube = youtubeUrl.trim();
   const youtubeValid = trimmedYoutube === '' || extractYouTubeId(trimmedYoutube) !== null;
@@ -111,7 +233,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
     });
   };
 
-  const setCell = (r: number, c: number, value: Color) => {
+  const setCell = (r: number, c: number, value: TileId | null) => {
     setBoard((prev) => {
       if (prev[r][c] === value) return prev;
       const next = prev.map(row => [...row]);
@@ -122,12 +244,13 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
 
   const handleCellPress = (r: number, c: number) => {
     const current = board[r][c];
-    if (activeColor !== null && current === activeColor) {
-      paintingRef.current = { mode: 'erase-same', target: activeColor };
+    const targetId = activeTile?.id ?? null;
+    if (targetId !== null && current === targetId) {
+      paintingRef.current = { mode: 'erase-same', target: targetId };
       setCell(r, c, null);
     } else {
-      paintingRef.current = { mode: 'paint', target: activeColor };
-      setCell(r, c, activeColor);
+      paintingRef.current = { mode: 'paint', target: targetId };
+      setCell(r, c, targetId);
     }
   };
   const handleCellEnter = (r: number, c: number) => {
@@ -146,12 +269,51 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
   const isBlocked = (r: number, c: number) =>
     validation.blockedCells.some(b => b.row === r && b.col === c);
 
+  // Soft perf warning: many image cells = many simultaneously-animated
+  // sprites on every frame. Count the *cells* (not unique tiles) since
+  // each image cell renders its own <img>.
+  const imageCellCount = useMemo(() => {
+    let n = 0;
+    for (const row of board) {
+      for (const cell of row) {
+        if (cell && tiles[cell]?.sprite.type === 'image') n++;
+      }
+    }
+    return n;
+  }, [board, tiles]);
+  const showImagePerfWarning = imageCellCount > ANIMATED_PERF_WARN_THRESHOLD;
+
+  // Logic-tile bookkeeping: surface a list of all behavior groups
+  // currently in the palette, and the set of "orphan" groups that have
+  // treasure tiles without any hidden tiles or vice-versa. Orphans are a
+  // soft warning rather than a publish blocker — sometimes treasure-only
+  // levels make sense (just as scoring chains), and sometimes hidden-only
+  // levels are intentional puzzle remix material.
+  const { behaviorGroups, orphanWarnings } = useMemo(() => {
+    const treasureGroups = new Set<string>();
+    const hiddenGroups = new Set<string>();
+    for (const t of palette) {
+      if (t.behavior?.type === 'treasure') treasureGroups.add(t.behavior.group);
+      if (t.behavior?.type === 'hidden') hiddenGroups.add(t.behavior.group);
+    }
+    const all = Array.from(new Set([...treasureGroups, ...hiddenGroups])).sort();
+    const warnings: string[] = [];
+    for (const g of treasureGroups) {
+      if (!hiddenGroups.has(g)) warnings.push(`Treasure group "${g}" has no hidden tiles to unlock.`);
+    }
+    for (const g of hiddenGroups) {
+      if (!treasureGroups.has(g)) warnings.push(`Hidden group "${g}" has no treasure to unlock it — it will stay locked.`);
+    }
+    return { behaviorGroups: all, orphanWarnings: warnings };
+  }, [palette]);
+
   const onPublish = async () => {
     if (!canPublish) return;
     try {
       await publishLevel({
         title: trimmedTitle,
         board,
+        tiles,
         youtubeUrl: trimmedYoutube || undefined,
         existingDTag: initial?.dTag,
       });
@@ -186,7 +348,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
         <p className="arcade-label text-[10px] tracking-[0.18em] text-muted-foreground">
           {isEdit
             ? 'Update this level. Republishing replaces the previous revision so existing unlocks and leaderboard entries carry over.'
-            : 'Paint colored cells to design a level. Each color must appear in multiples of 4, and no row/column may contain 4+ same-color cells in a row. Publish to share with the community.'}
+            : 'Paint tiles to design a level. Each tile must appear in multiples of 4, and no row/column may contain 4+ of the same tile in a row. Publish to share with the community.'}
         </p>
       </CardHeader>
 
@@ -234,7 +396,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <ImageToBoardDialog
             minDim={MIN_DIM}
             maxDim={MAX_DIM}
@@ -253,37 +415,94 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
               </ArcadePill>
             }
           />
+
+          <label className={cn('inline-flex', isUploading && 'pointer-events-none opacity-60')}>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={isUploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                void handleImageUpload(f);
+              }}
+            />
+            <ArcadePill asChild tone="cyan" size="sm">
+              <span>
+                <ArcadePillIcon tone="cyan" size="sm">
+                  {isUploading ? (
+                    <Upload className={arcadePillIconSize('sm')} />
+                  ) : (
+                    <ImagePlus className={arcadePillIconSize('sm')} />
+                  )}
+                </ArcadePillIcon>
+                {isUploading ? 'Uploading...' : 'Add image tile'}
+              </span>
+            </ArcadePill>
+          </label>
+
+          <AddEmojiTileDialog onAdd={addCustomTile} />
+
+          <TileLibraryDialog
+            paletteIds={paletteIdSet}
+            onPick={addCustomTile}
+          />
+
+          <AddLogicTilesDialog
+            existingGroups={behaviorGroups}
+            onAdd={addCustomTile}
+          />
         </div>
 
         <div>
           <p className="arcade-label mb-2 text-[11px] text-slate-600">Palette</p>
           <div className="flex flex-wrap items-center gap-2">
-            {palette.map(color => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setActiveColor(color)}
-                className={cn(
-                  'h-9 w-9 rounded-full border-2 transition-all',
-                  activeColor === color
-                    ? 'scale-110 border-slate-900 shadow-md'
-                    : 'border-white/60 hover:scale-105',
-                )}
-                style={{ backgroundColor: color }}
-                aria-label={`Paint with ${color}`}
-                aria-pressed={activeColor === color}
-              />
-            ))}
+            {palette.map(tile => {
+              const isActive = activeTile?.id === tile.id;
+              const behavior = tile.behavior;
+              return (
+                <button
+                  key={tile.id}
+                  type="button"
+                  onClick={() => setActiveTile(tile)}
+                  className={cn(
+                    'relative h-9 w-9 rounded-full border-2 transition-all',
+                    isActive
+                      ? 'scale-110 border-slate-900 shadow-md'
+                      : 'border-white/60 hover:scale-105',
+                  )}
+                  style={{ backgroundColor: tileBackgroundColor(tile) }}
+                  aria-label={tileLabel(tile)}
+                  aria-pressed={isActive}
+                  title={tileLabel(tile)}
+                >
+                  <span className="absolute inset-0 overflow-hidden rounded-full">
+                    <TileSprite tile={tile} />
+                  </span>
+                  {behavior?.type === 'treasure' && (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-white shadow ring-2 ring-white">
+                      <Sparkles className="h-2.5 w-2.5" />
+                    </span>
+                  )}
+                  {behavior?.type === 'hidden' && (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white shadow ring-2 ring-white">
+                      <Eye className="h-2.5 w-2.5" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             <button
               type="button"
-              onClick={() => setActiveColor(null)}
+              onClick={() => setActiveTile(null)}
               className={cn(
                 'arcade-label flex h-9 items-center gap-1 rounded-full border-2 px-3 text-[10px] transition-all',
-                activeColor === null
+                activeTile === null
                   ? 'scale-110 border-slate-900 bg-slate-900 text-white shadow-md'
                   : 'border-slate-300 text-slate-600 hover:scale-105',
               )}
-              aria-pressed={activeColor === null}
+              aria-pressed={activeTile === null}
             >
               <Eraser className="h-4 w-4" />
               Erase
@@ -300,6 +519,28 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
           </div>
         )}
 
+        {showImagePerfWarning && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+            <span className="text-base font-bold">!</span>
+            <p className="arcade-label text-[11px] leading-relaxed">
+              Heads up: this level has {imageCellCount} image tile cells.
+              Animated images may drop the frame rate during drag on slower
+              devices — still publishable, just FYI.
+            </p>
+          </div>
+        )}
+
+        {orphanWarnings.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+            <span className="text-base font-bold">!</span>
+            <ul className="arcade-label space-y-0.5 text-[11px] leading-relaxed">
+              {orphanWarnings.map((msg) => (
+                <li key={msg}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[auto,1fr]">
           <div
             className="select-none rounded-xl bg-slate-100/70 p-2"
@@ -312,8 +553,9 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
               style={{ gridTemplateColumns: `repeat(${cols}, ${cellSizePx}px)` }}
             >
               {board.flatMap((row, r) =>
-                row.map((cell, c) => {
+                row.map((cellId, c) => {
                   const blocked = isBlocked(r, c);
+                  const tile = cellId ? tiles[cellId] ?? null : null;
                   return (
                     <button
                       key={`${r}-${c}`}
@@ -322,17 +564,18 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
                       onMouseEnter={() => handleCellEnter(r, c)}
                       onTouchStart={(e) => { e.preventDefault(); handleCellPress(r, c); }}
                       className={cn(
-                        'relative rounded-full border-2 border-transparent transition-all',
-                        cell ? '' : 'border-dashed border-slate-300 bg-transparent',
+                        'relative rounded-full border-2 border-transparent transition-all overflow-hidden',
+                        cellId ? '' : 'border-dashed border-slate-300 bg-transparent',
                         blocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
                       )}
                       style={{
                         width: cellSizePx,
                         height: cellSizePx,
-                        backgroundColor: cell ?? 'transparent',
+                        backgroundColor: tileBackgroundColor(tile),
                       }}
-                      aria-label={`Cell ${r + 1}-${c + 1}${cell ? '' : ' (empty)'}${blocked ? ' (part of a 5+ run)' : ''}`}
+                      aria-label={`Cell ${r + 1}-${c + 1}${cellId ? '' : ' (empty)'}${blocked ? ' (part of a 4+ run)' : ''}`}
                     >
+                      <TileSprite tile={tile} />
                       {blocked && (
                         <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                           !
@@ -354,15 +597,18 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
                 </p>
               ) : (
                 <ul className="space-y-1.5">
-                  {Object.entries(validation.colorCounts).map(([color, count]) => {
+                  {Object.entries(validation.colorCounts).map(([id, count]) => {
+                    const tile = tiles[id];
                     const ok = count % 4 === 0;
                     return (
-                      <li key={color} className="flex items-center gap-2">
+                      <li key={id} className="flex items-center gap-2">
                         <span
-                          className="inline-block h-4 w-4 rounded-full border border-white/50"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span className="font-mono text-xs">{color}</span>
+                          className="relative inline-block h-4 w-4 overflow-hidden rounded-full border border-white/50"
+                          style={{ backgroundColor: tileBackgroundColor(tile ?? null) }}
+                        >
+                          <TileSprite tile={tile ?? null} />
+                        </span>
+                        <span className="font-mono text-xs">{tileLabel(tile)}</span>
                         <span className={cn('arcade-label ml-auto text-[10px]', ok ? 'text-emerald-600' : 'text-red-600')}>
                           {count} {ok ? 'ok' : `(need +${4 - (count % 4)})`}
                         </span>
@@ -413,3 +659,12 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
   );
 }
 
+/** Short human-readable label for a tile (used in aria-labels, tooltips,
+ * and the validation panel). */
+function tileLabel(tile: TileKind | undefined): string {
+  if (!tile) return 'Empty';
+  if (tile.label) return tile.label;
+  if (tile.sprite.type === 'color') return tile.sprite.value;
+  if (tile.sprite.type === 'image') return tile.sprite.alt ?? 'Image tile';
+  return 'Emoji tile';
+}

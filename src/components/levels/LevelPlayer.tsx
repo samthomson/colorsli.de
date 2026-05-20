@@ -135,6 +135,7 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
       <ColourSlideGame
         key={level.coordinate}
         initialBoard={level.board}
+        initialTiles={level.tiles}
         levelLabel={level.title}
         onComplete={handleComplete}
         started={started}

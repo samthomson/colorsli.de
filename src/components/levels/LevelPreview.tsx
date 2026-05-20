@@ -1,13 +1,27 @@
 import { cn } from '@/lib/utils';
 import type { Board } from '@/lib/colorSlide';
+import {
+  lookupTile,
+  tileBackgroundColor,
+  type TileKind,
+  type TilePalette,
+} from '@/lib/tile';
+import { TileSprite } from '@/components/TileSprite';
 
 type LevelPreviewProps = {
   board: Board;
+  /**
+   * Tile palette for resolving cell ids to sprites. Optional for backward
+   * compatibility — when omitted, cells are treated as hex strings (which
+   * is correct for legacy v1 boards). If passed, the preview renders via
+   * `lookupTile` so image / emoji tiles render too.
+   */
+  tiles?: TilePalette;
   className?: string;
 };
 
 /** Tiny read-only thumbnail of a level board. Used in cards and editor. */
-export function LevelPreview({ board, className }: LevelPreviewProps) {
+export function LevelPreview({ board, tiles, className }: LevelPreviewProps) {
   const cols = board[0]?.length ?? 0;
 
   return (
@@ -17,16 +31,28 @@ export function LevelPreview({ board, className }: LevelPreviewProps) {
       aria-hidden
     >
       {board.flatMap((row, r) =>
-        row.map((color, c) => (
-          <div
-            key={`${r}-${c}`}
-            className={cn(
-              'aspect-square rounded-full',
-              color ? '' : 'border border-dashed border-slate-300/70 bg-transparent',
-            )}
-            style={color ? { backgroundColor: color } : undefined}
-          />
-        )),
+        row.map((cellId, c) => {
+          if (cellId === null) {
+            return (
+              <div
+                key={`${r}-${c}`}
+                className="aspect-square rounded-full border border-dashed border-slate-300/70 bg-transparent"
+              />
+            );
+          }
+          const tile: TileKind = tiles
+            ? lookupTile(tiles, cellId)
+            : { id: cellId, sprite: { type: 'color', value: cellId } };
+          return (
+            <div
+              key={`${r}-${c}`}
+              className="relative aspect-square overflow-hidden rounded-full"
+              style={{ backgroundColor: tileBackgroundColor(tile) }}
+            >
+              <TileSprite tile={tile} />
+            </div>
+          );
+        }),
       )}
     </div>
   );

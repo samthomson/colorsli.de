@@ -72,7 +72,7 @@ export function LevelGrid({ levels, completedCoordinates, onSelect }: LevelGridP
             <h3 className="brand-arcade-title bg-clip-text text-transparent line-clamp-2 text-xl leading-tight sm:text-2xl">
               {level.title}
             </h3>
-            <LevelPreview board={level.board} className="max-w-full" />
+            <LevelPreview board={level.board} tiles={level.tiles} className="max-w-full" />
             <div className="flex items-center justify-between">
               <span className="arcade-label text-[10px] text-slate-500">
                 {level.rows}x{level.cols}

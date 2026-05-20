@@ -33,7 +33,7 @@ export function useUpdateSaveGame() {
         throw new Error('Your signer does not support NIP-44 encryption — please upgrade.');
       }
 
-      const current = saveQuery.data ?? { version: 2 as const, completed: [] };
+      const current = saveQuery.data ?? { completed: [] };
       const next = withCompletion(current, args.levelCoordinate);
 
       // Always (re)publish so the user's `lastUpdated` walks forward even if

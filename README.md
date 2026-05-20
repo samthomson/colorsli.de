@@ -105,6 +105,7 @@ features:
 - [ ] dm, private levels
 - [ ] scoring
 - [ ] zap a level author
+- [ ] level designer: button to randomly fill the remainder
 
 - [ ] multilingual
 - [ ] fork/edit, delete your own levels

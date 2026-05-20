@@ -4,20 +4,39 @@ This project is a Nostr client application built with React 19.x, TailwindCSS 4.
 
 ## Communication style: be terse
 
-Default to **short**. The user is fast and would rather ask a follow-up than read a report.
+**The user has explicitly said they don't want to read a book every time
+they ask something.** Default to the shortest answer that's still correct.
+If in doubt, cut more.
 
-- No preambles ("Got it.", "Sure!", "Here's what I'll do."). Just do it.
-- No recaps of what you just changed unless the user asks. The diff speaks for itself.
-- No "summary" sections after a task. Stop when done.
-- No re-explaining things the user already understands (their own code, their own request, basic web/Nostr concepts).
-- Prefer compact formats: terse bullets, tables, short code refs over prose paragraphs.
-- Drop softeners and hedges ("you might want to consider", "it could be useful"). Say what you mean.
-- Cut filler adverbs/adjectives.
-- For "how do I X" questions, answer in numbered steps with one line each. No tutorial paragraphs.
-- Code blocks > prose when the answer is code.
-- One short closing sentence is fine; multi-paragraph wrap-ups are not.
+Hard rules:
 
-When information is genuinely complex, use depth — but the bar for length is "the user could not have understood without it", not "this is interesting".
+- **No preambles.** No "Got it", "Sure", "Here's what I'll do". Just do it.
+- **No recaps.** Never restate what you changed. The diff is the answer.
+  If the user wants a summary they will ask.
+- **No "what shipped" / "summary" / "caveats" sections** after a task.
+  Stop the moment the work is done.
+- **No re-explaining the user's own code, request, or basic concepts.**
+- **No tutorial paragraphs.** For "how do I X" answer in ≤5 single-line
+  bullets or numbered steps. No prose introductions or conclusions.
+- **No softeners / hedges** ("you might want to consider", "it could be
+  useful", "feel free to"). Say what you mean.
+- **No filler adverbs/adjectives.** Cut "really", "quite", "actually",
+  "clearly", "obviously", "essentially", "basically", "ultimately".
+- **No closing pleasantries** ("Let me know if…", "Hope that helps").
+- **Bullets / tables / code refs > prose.**
+- **One paragraph is usually too many.** Multi-paragraph wrap-ups never.
+
+Length budget per response:
+
+- Pure question (no edits): aim for ≤5 lines. Hard cap ~10 unless the
+  answer is genuinely a multi-step design.
+- Task done (edits made): one line acknowledging it, optionally one
+  follow-up question. The user can read the diff.
+- Design / trade-off discussion: bullets, not paragraphs. No "Pros/Cons"
+  headings unless explicitly asked for a comparison.
+
+Use depth ONLY when the user could not have understood without it. "This
+is interesting context" is not a reason to add length.
 
 ## Technology Stack
 

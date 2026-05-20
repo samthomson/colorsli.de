@@ -11,13 +11,28 @@ import {
   createRandomBoard,
   isGameComplete,
 } from '@/lib/colorSlide';
+import {
+  colorTilesFromBoard,
+  lookupTile,
+  matchKeyBoard,
+  tileBackgroundColor,
+  type TilePalette,
+} from '@/lib/tile';
+import { TileSprite } from '@/components/TileSprite';
 import { computeScore, formatTime } from '@/lib/scoring';
 
 /**
  * LLM maintenance notes:
  * - Core invariants live in `src/lib/colorSlide.ts`. This component is just
  *   the React drag/drop UI.
- * - Match resolution is deferred until drag release (never during drag movement).
+ * - Cells store tile ids; the per-level `tiles` palette resolves each id
+ *   to a `TileKind` (sprite + optional behavior). Color tiles use the hex
+ *   string itself as the id so legacy hex-board callers (practice mode,
+ *   v1 levels) Just Work.
+ * - Match resolution is deferred until drag release (never during drag
+ *   movement). The engine runs against a projected match-key board via
+ *   `matchKeyBoard` so future hidden tiles (stage 3) can be visible-but-
+ *   unmatchable without touching match algorithms.
  * - When `initialBoard` is provided, the random size selector + new game button
  *   are hidden and the timer + onComplete callback fire on first move / game end.
  */
@@ -31,6 +46,12 @@ export type CompletionResult = {
 export type ColourSlideGameProps = {
   /** Pre-built board to play. If omitted, the component is in random/practice mode. */
   initialBoard?: Board;
+  /**
+   * Tile palette covering every id used in `initialBoard`. Required for
+   * level mode; in practice mode the component synthesizes a palette of
+   * default color tiles from whatever cells the random generator emits.
+   */
+  initialTiles?: TilePalette;
   /** Optional title shown in the card header (e.g. the level name). */
   levelLabel?: string;
   /** Called once when the player clears the board. */
@@ -46,6 +67,7 @@ export type ColourSlideGameProps = {
 
 export function ColourSlideGame({
   initialBoard,
+  initialTiles,
   levelLabel,
   onComplete,
   started = true,
@@ -56,6 +78,20 @@ export function ColourSlideGame({
   const [board, setBoard] = useState<Board>(
     () => initialBoard?.map(row => [...row]) ?? createRandomBoard(10),
   );
+
+  // Tile palette: stick with whatever was provided in level mode; for
+  // practice mode we synthesize default color tiles from the random
+  // board's cell hex strings (color tile id === hex, so this is identity).
+  const tiles = useMemo<TilePalette>(() => {
+    if (initialTiles) return initialTiles;
+    if (initialBoard) return colorTilesFromBoard(initialBoard);
+    return colorTilesFromBoard(board);
+  }, [initialTiles, initialBoard, board]);
+
+  // Reveal state for hidden-tile behaviors. Grows when a treasure tile
+  // group is cleared (see `triggerMatchCheck`); never shrinks within a
+  // single playthrough.
+  const [revealed, setRevealed] = useState<Set<string>>(() => new Set<string>());
   const [dragging, setDragging] = useState<{
     type: 'row' | 'col' | 'undecided';
     index: number;
@@ -83,11 +119,20 @@ export function ColourSlideGame({
     setIsComplete(false);
     setMoveCount(0);
     setStartedAt(null);
+    setRevealed(new Set<string>());
     completionFiredRef.current = false;
   }, []);
 
+  // Projected match-key board (identity in stage 1, hidden-tile-aware in
+  // stage 3). All match / block / completion checks consume this rather
+  // than the raw board so the engine stays oblivious to tile behaviors.
+  const projectedBoard = useMemo(
+    () => matchKeyBoard(board, tiles, revealed),
+    [board, tiles, revealed],
+  );
+
   // Derived: blocked cells always reflect the current board with no setState.
-  const blocked = useMemo(() => checkBlocked(board), [board]);
+  const blocked = useMemo(() => checkBlocked(projectedBoard), [projectedBoard]);
 
   // Tick the elapsed-time clock once a second while a run is active.
   // (Also ticks for practice mode so the post-completion modal can show
@@ -102,10 +147,31 @@ export function ColourSlideGame({
   // this synchronously from `handleMouseUp` to avoid setState-in-effect.
   const triggerMatchCheck = useCallback(() => {
     setBoard((currentBoard) => {
-      const matches = checkMatches(currentBoard);
+      const projected = matchKeyBoard(currentBoard, tiles, revealed);
+      const matches = checkMatches(projected);
       if (matches.length === 0) return currentBoard;
 
       setMatching(matches);
+
+      // Side effect: if any treasure tiles cleared, unlock their groups
+      // so the corresponding hidden tiles become matchable + render their
+      // real sprite. Fire synchronously with the match animation so the
+      // reveal feels coupled to the player's slide rather than to the
+      // delayed null step below.
+      const groupsToReveal = new Set<string>();
+      for (const { row, col } of matches) {
+        const cellId = currentBoard[row][col];
+        if (!cellId) continue;
+        const behavior = tiles[cellId]?.behavior;
+        if (behavior?.type === 'treasure') groupsToReveal.add(behavior.group);
+      }
+      if (groupsToReveal.size > 0) {
+        setRevealed((prev) => {
+          const next = new Set(prev);
+          for (const g of groupsToReveal) next.add(g);
+          return next;
+        });
+      }
 
       setTimeout(() => {
         setBoard((prev) => {
@@ -126,7 +192,7 @@ export function ColourSlideGame({
       // Keep board unchanged here; the timeout above does the actual clearing.
       return currentBoard;
     });
-  }, []);
+  }, [tiles, revealed]);
 
   // Fire onComplete exactly once when the board clears. Practice + level
   // modes both notify their parent — the only difference is the modal the
@@ -306,7 +372,7 @@ export function ColourSlideGame({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Slide rows and columns to match 4 colors in a row. Click and drag to slide!
+            Slide rows and columns to match 4 tiles in a row. Click and drag to slide!
           </p>
         )}
       </CardHeader>
@@ -332,7 +398,7 @@ export function ColourSlideGame({
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
           >
             {board.map((row, rowIndex) => (
-              row.map((color, colIndex) => {
+              row.map((cellId, colIndex) => {
                 const isMatching = matching.some(m => m.row === rowIndex && m.col === colIndex);
                 const isBlocked = blocked.some(b => b.row === rowIndex && b.col === colIndex);
                 const isDraggingRow = dragging?.type === 'row' && dragging?.index === rowIndex;
@@ -345,32 +411,48 @@ export function ColourSlideGame({
                   else if (isDraggingCol) transform = `translateY(${dragging.offsetY}px)`;
                 }
 
+                const tile = cellId ? lookupTile(tiles, cellId) : null;
+                const isHidden =
+                  tile?.behavior?.type === 'hidden' &&
+                  !revealed.has(tile.behavior.group);
+
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     className={cn(
-                      'aspect-square rounded-full relative',
-                      color ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
+                      'aspect-square rounded-full relative overflow-hidden',
+                      cellId ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
                       isMatching && 'scale-125 animate-pulse shadow-lg',
                       isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
                       isDraggingThis ? 'transition-none' : 'transition-all duration-200',
                       isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 shadow-xl scale-105',
                       isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105',
+                      isHidden && 'bg-slate-700 dark:bg-slate-800',
                     )}
-                    style={{ backgroundColor: color || 'transparent', transform }}
+                    style={{
+                      backgroundColor: isHidden ? undefined : tileBackgroundColor(tile),
+                      transform,
+                    }}
                     onMouseDown={(e) => {
-                      if (color) {
+                      if (cellId) {
                         e.preventDefault();
                         handleMouseDown(rowIndex, colIndex, e.clientX, e.clientY);
                       }
                     }}
                     onTouchStart={(e) => {
-                      if (color) {
+                      if (cellId) {
                         const touch = e.touches[0];
                         handleMouseDown(rowIndex, colIndex, touch.clientX, touch.clientY);
                       }
                     }}
                   >
+                    {isHidden ? (
+                      <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-300">
+                        ?
+                      </span>
+                    ) : (
+                      <TileSprite tile={tile} />
+                    )}
                     {isBlocked && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-white text-xs font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">!</div>

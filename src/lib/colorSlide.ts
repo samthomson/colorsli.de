@@ -2,21 +2,35 @@
  * Pure board logic for Color Slide.
  *
  * Rules:
- * - A board is a 2D array of color hex strings or `null` (empty cell).
- * - A "match" is exactly 4 same-colored cells in a row or column. Runs of 5+
+ * - A board is a 2D array of tile ids or `null` (empty cell). A tile id is
+ *   an opaque string identifying a `TileKind` in the level's palette
+ *   (`src/lib/tile.ts`). Default color tiles use the hex string itself as
+ *   the id, so a legacy v1 board (cells = raw hex) is a valid id board
+ *   too — no migration required.
+ * - A "match" is exactly 4 same-id cells in a row or column. Runs of 5+
  *   are blocked (never clear) and shown to the player as warnings.
- * - A *starting* board is "valid" iff every non-null color count is divisible
- *   by 4 AND there are no runs of 4 or more in any row/column. Pre-existing
- *   4-runs would auto-clear on the player's first move; pre-existing 5+ runs
- *   are permanently blocked. Neither belongs in a starting position — the
- *   maximum allowed run length on a starting board is 3.
+ * - A *starting* board is "valid" iff every non-null tile id count is
+ *   divisible by 4 AND there are no runs of 4+ in any row/column.
+ *   Pre-existing 4-runs would auto-clear on the player's first move;
+ *   pre-existing 5+ runs are permanently blocked. Neither belongs in a
+ *   starting position — the maximum allowed run length is 3.
+ *
+ * The engine itself only ever does string equality on cell values. It
+ * doesn't care that ids are tile ids; "matchability" decisions live in
+ * the tile module via `matchKeyBoard`, which produces a projected id
+ * board the engine consumes unchanged. That's how hidden tiles can be
+ * visible-but-unmatchable without touching this file's algorithms.
  */
 
+/** Cell value: either a tile id or `null` for an empty cell. Historical
+ * alias `Color` is kept for back-compat with files that still import it. */
 export type Color = string | null;
 export type Board = Color[][];
 export type Cell = { row: number; col: number };
 
-/** Default playable color palette for the editor and random generator. */
+/** Default playable color palette. Used by the random generator and as
+ * the initial brush set for the level editor. Each hex is also the id
+ * of its corresponding default color tile (see `tile.ts`). */
 export const COLORS = [
   '#ef4444', // red
   '#3b82f6', // blue
@@ -199,18 +213,30 @@ export type LevelValidation = {
    * would be permanently blocked). Level cannot be published while non-empty.
    */
   blockedCells: Cell[];
-  /** Per-color cell counts, only for non-null cells. */
+  /** Per-tile-id counts of non-null cells in the raw board. */
   colorCounts: Record<string, number>;
-  /** Colors whose count is not a positive multiple of 4. */
+  /** Tile ids whose count is not a positive multiple of 4. */
   invalidColors: string[];
-  /** True iff publishable: at least one colored cell, no blocked, all counts %4==0. */
+  /** True iff publishable: at least one tile, no blocked, all counts %4==0. */
   isValid: boolean;
 };
 
-export function validateLevel(board: Board): LevelValidation {
+/**
+ * Validate a starting board.
+ *
+ * Pass `projected` if some cells are non-matchable at game start (e.g.
+ * hidden tiles in stage 3 — `matchKeyBoard(board, tiles, new Set())`).
+ * Run-length checks use the projected board so hidden tiles can't form
+ * runs at start, while count checks use the raw board so per-tile-id
+ * multiples-of-4 still apply to every kind including hidden tiles.
+ *
+ * When `projected` is omitted, run-length checks fall back to the raw
+ * board — the stage-1 behavior callers historically relied on.
+ */
+export function validateLevel(board: Board, projected?: Board): LevelValidation {
   // Stricter than the runtime `checkBlocked` (which only flags 5+): for
   // starting-board validation, any run of 4 or more is an issue.
-  const blockedCells = checkRunsAtLeast(board, 4);
+  const blockedCells = checkRunsAtLeast(projected ?? board, 4);
   const colorCounts: Record<string, number> = {};
   let totalColored = 0;
 

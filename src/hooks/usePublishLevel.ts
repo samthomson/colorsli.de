@@ -3,10 +3,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useReliablePublish } from '@/hooks/useReliablePublish';
 import { buildLevelTemplate } from '@/lib/levelEvent';
 import type { Board } from '@/lib/colorSlide';
+import type { TilePalette } from '@/lib/tile';
 
 /**
  * Publishes a Color Slide level (kind 37283 addressable) through the
  * reliable publish chokepoint, so failures land in the pending-events queue.
+ *
+ * `tiles` is the palette covering every cell id used in `board`.
+ * `buildLevelTemplate` prunes unused entries before publishing.
  *
  * Pass `existingDTag` to *edit* an already-published level — it reuses the
  * d-tag, which makes the publish a replacement of the previous revision.
@@ -24,6 +28,7 @@ export function usePublishLevel() {
     async (args: {
       title: string;
       board: Board;
+      tiles: TilePalette;
       youtubeUrl?: string;
       existingDTag?: string;
     }) => {

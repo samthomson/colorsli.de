@@ -27,6 +27,9 @@ level (completions, save game, official list) reference the coordinate via
   `crypto.getRandomValues` on first publish.
 - `["t", "colorslide"]` — required, top-level filter.
 - `["t", "colorslide-level"]` — required, identifies the event as a level.
+- `["t", "colorslide-logic"]` — present when the level uses non-normal
+  tile behaviors (treasure / hidden). Lets clients badge or filter
+  "logic levels" without parsing content.
 - `["title", "<level title>"]` — required, plain text, max 64 chars.
 - `["rows", "<n>"]` — number of rows in the board (string-encoded integer).
 - `["cols", "<n>"]` — number of columns in the board.
@@ -39,26 +42,48 @@ level (completions, save game, official list) reference the coordinate via
 
 ### Content
 
-Stringified JSON with a single `board` field — a 2D array of
-`(string | null)` cells, where strings are CSS hex colors (e.g. `"#ef4444"`)
-and `null` represents an empty cell.
+Stringified JSON:
 
 ```json
 {
   "board": [
     ["#ef4444", "#3b82f6", null, "#10b981"],
-    ["#ef4444", "#3b82f6", "#10b981", "#10b981"],
-    ["#ef4444", "#3b82f6", "#10b981", null],
-    ["#ef4444", "#3b82f6", null, null]
-  ]
+    ["#ef4444", "#3b82f6", "#10b981", "#10b981"]
+  ],
+  "tiles": {
+    "#ef4444": { "id": "#ef4444", "sprite": { "type": "color", "value": "#ef4444" } },
+    "#3b82f6": { "id": "#3b82f6", "sprite": { "type": "color", "value": "#3b82f6" } },
+    "#10b981": { "id": "#10b981", "sprite": { "type": "color", "value": "#10b981" } }
+  }
 }
 ```
 
+- `board` is a 2D array of `(string | null)` cells. Each non-null cell is
+  a **tile id** that must appear in `tiles`. `null` is an empty cell.
+- `tiles` maps each tile id to a `TileKind`:
+  - `id` — same as the map key.
+  - `sprite` — visual content. Discriminated by `type`:
+    - `{ type: "color", value: "<hex>" }`
+    - `{ type: "image", url: "<https url>", sha256?: "<hex>", alt?: "<text>" }`
+    - `{ type: "emoji", value: "<glyph>" }`
+  - `behavior` — optional gameplay role. Discriminated by `type`:
+    - `{ type: "normal" }` (default if omitted)
+    - `{ type: "treasure", group: "<id>" }` — when 4 of these clear,
+      reveal all `hidden` tiles whose `group` matches.
+    - `{ type: "hidden", group: "<id>" }` — visible-but-unmatchable
+      until the matching treasure group is cleared.
+  - `label` — optional short human-readable name.
+
+Default color tiles MUST use the hex string itself as their id, so a
+board referencing `"#ef4444"` resolves to its palette entry trivially.
+
 ### Validation rules (enforced by the editor before publish)
 
-1. Each non-null color must appear in a multiple of 4 cells.
-2. No row or column may contain a run of 5+ identical colors.
-3. At least one colored cell must be present.
+1. Each non-null tile id must appear in a multiple of 4 cells.
+2. No row or column may contain a run of 4 or more identical tile ids
+   (after projecting hidden tiles to per-cell unique sentinels — hidden
+   tiles can never form runs at start).
+3. At least one non-null cell must be present.
 
 Clients SHOULD re-validate on read and ignore boards that fail.
 
@@ -72,6 +97,70 @@ replacement of the original.
 When deduping query results, the client keeps the highest `created_at` per
 coordinate. Relays that honour addressable replacement will only return one
 revision per coordinate anyway; the client-side dedupe is defense-in-depth.
+
+---
+
+## Kind 37284 — Color Slide reusable image tile (addressable)
+
+A user-owned uploaded-image sprite that can be picked from a personal
+library when building levels. Created automatically the first time the
+user adds a new image tile in the editor.
+
+Only image tiles get library entries:
+
+- **Color tiles** — the hex IS the id; infinite variety at zero cost.
+- **Emoji tiles** — universal Unicode; the editor's built-in picker is
+  sufficient, nothing per-user worth persisting.
+- **Behavior (treasure / hidden)** — level-scoped, only meaningful in
+  the context of a specific level's groupings.
+
+The level event still embeds a full snapshot of its palette, so play
+does NOT depend on resolving these events. The library is purely a
+"remember my uploaded images" facet.
+
+### d-tag
+
+`d` is the in-palette tile id: `img:<sha256>`, content-addressed from
+the Blossom hash. Re-uploading the same image collapses to a replacement
+(NIP-01 addressable semantics).
+
+### Tags
+
+- `["d", "img:<sha256>"]` — required.
+- `["t", "colorslide"]` — required.
+- `["t", "colorslide-tile"]` — required, identifies the event as a tile.
+- `["title", "<label>"]` — optional, user-given friendly name.
+- `["alt", "Color Slide tile: <summary> (https://colorsli.de)"]` —
+  required NIP-31 alt text.
+- `["image", "<url>"]` — the Blossom URL.
+- `["x", "<sha256>"]` — the content hash.
+- `["alt-text", "<text>"]` — accessibility text (kept separate from the
+  NIP-31 `alt` because it describes the *image*, not the event).
+
+### Content
+
+Stringified JSON containing the `TileKind` minus the `behavior` field:
+
+```json
+{
+  "id": "img:8e9a...",
+  "sprite": { "type": "image", "url": "https://...", "sha256": "8e9a...", "alt": "My cat" },
+  "label": "Mittens"
+}
+```
+
+### Library querying
+
+The "pick from library" UI in the level editor queries:
+
+```
+{ kinds: [37284], authors: [user.pubkey], '#t': ['colorslide-tile'], limit: 500 }
+```
+
+Filtered by the current user's `pubkey` — there is no global tile feed
+(today). Other users' tiles can still be referenced by addressable
+coordinate, but the editor's UI scopes the library to the author so the
+picker is a personal "saved tiles" view rather than a directory.
 
 ---
 
@@ -172,7 +261,6 @@ NIP-44 ciphertext (encrypted with `peer = self.pubkey`) of the JSON:
 
 ```json
 {
-  "version": 2,
   "completed": ["37283:<author>:<d>", "37283:<author>:<d>", "..."]
 }
 ```
@@ -181,10 +269,6 @@ NIP-44 ciphertext (encrypted with `peer = self.pubkey`) of the JSON:
 player has cleared at least once. Coordinates (not event ids) are stored so
 unlocks survive level edits — when an author republishes a level, existing
 completions still apply.
-
-`version` is the schema version: bumped to `2` when coordinates replaced
-event ids. Clients silently treat any other version as an empty save (no
-migration; pre-launch the assumption is no real users to migrate).
 
 There are intentionally no scores or timestamps here — kind-1 completions
 are the source of truth for any leaderboard / personal-best display.

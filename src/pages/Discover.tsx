@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
-import { Pencil } from 'lucide-react';
+import { Pencil, Play as PlayIcon } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { Template } from '@/components/Template';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,15 +102,14 @@ function LevelCard({
   const name = author.data?.metadata?.name ?? genUserName(level.pubkey);
   const npub = nip19.npubEncode(level.pubkey);
   const isOwn = currentUserPubkey === level.pubkey;
-  // naddr is the canonical NIP-19 form for an addressable event; the
-  // editor route consumes it via ?edit=<naddr>.
-  const editNaddr = isOwn
-    ? nip19.naddrEncode({
-        identifier: level.dTag,
-        pubkey: level.pubkey,
-        kind: KINDS.LEVEL,
-      })
-    : null;
+  // naddr is the canonical NIP-19 form for an addressable event. The
+  // editor consumes it via `/create?edit=<naddr>`, the player via
+  // `/play?level=<naddr>` (same one-off load path for both flows).
+  const naddr = nip19.naddrEncode({
+    identifier: level.dTag,
+    pubkey: level.pubkey,
+    kind: KINDS.LEVEL,
+  });
 
   return (
     <Card className="border-cyan-200/50 bg-white/70 backdrop-blur">
@@ -136,16 +135,25 @@ function LevelCard({
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        <LevelPreview board={level.board} />
-        {editNaddr && (
+        <LevelPreview board={level.board} tiles={level.tiles} />
+        <div className="flex flex-wrap items-center gap-2">
           <Link
-            to={`/create?edit=${editNaddr}`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/70 bg-white/80 px-3 py-1 text-xs font-bold text-cyan-800 hover:border-cyan-400 hover:bg-cyan-50"
+            to={`/play?level=${naddr}`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 px-3 py-1 text-xs font-bold text-white shadow hover:from-cyan-400 hover:to-blue-500"
           >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
+            <PlayIcon className="h-3.5 w-3.5" />
+            Play
           </Link>
-        )}
+          {isOwn && (
+            <Link
+              to={`/create?edit=${naddr}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/70 bg-white/80 px-3 py-1 text-xs font-bold text-cyan-800 hover:border-cyan-400 hover:bg-cyan-50"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Link>
+          )}
+        </div>
         {showAdminControls && (
           <AdminLevelControls
             levelCoordinate={level.coordinate}

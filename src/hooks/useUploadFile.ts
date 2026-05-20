@@ -1,8 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { BlossomUploader } from '@nostrify/nostrify/uploaders';
 
+import { ACTIVE } from "@/lib/constants";
 import { useCurrentUser } from "./useCurrentUser";
 
+/**
+ * Upload an arbitrary file to the configured Blossom servers. The first
+ * URL in `ACTIVE.blossom` is the upload target; additional URLs become
+ * `server` tags so clients can fall back when fetching the blob.
+ *
+ * Returns the NIP-94-style tag array from the uploader, e.g.
+ * `[['url', '...'], ['x', '<sha256>'], ['m', '<mime>'], ['size', '...']]`.
+ */
 export function useUploadFile() {
   const { user } = useCurrentUser();
 
@@ -13,9 +22,7 @@ export function useUploadFile() {
       }
 
       const uploader = new BlossomUploader({
-        servers: [
-          'https://blossom.primal.net/',
-        ],
+        servers: [...ACTIVE.blossom],
         signer: user.signer,
       });
 

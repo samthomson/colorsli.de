@@ -12,31 +12,26 @@
  */
 import { GAME_URL, KINDS, TAGS } from '@/lib/constants';
 
-/** Bumped from 1 -> 2 when we switched `completed` from event ids to
- * coordinates. There is no migration: old v1 saves are silently treated as
- * empty. (Pre-launch, no real users.) */
 export type SaveGame = {
-  version: 2;
   /** Set of cleared level coordinates (`kind:pubkey:d`). Order is irrelevant. */
   completed: string[];
 };
 
-export const EMPTY_SAVE_GAME: SaveGame = { version: 2, completed: [] };
+export const EMPTY_SAVE_GAME: SaveGame = { completed: [] };
 
 /** Parse a decrypted save-game JSON string. Returns the empty save on any
- * error or any version mismatch — explicit, no migration. */
+ * malformed input. */
 export function parseSaveGame(plaintext: string | undefined | null): SaveGame {
   if (!plaintext) return { ...EMPTY_SAVE_GAME };
   try {
     const parsed: unknown = JSON.parse(plaintext);
     if (!parsed || typeof parsed !== 'object') return { ...EMPTY_SAVE_GAME };
     const obj = parsed as Partial<SaveGame>;
-    if (obj.version !== 2) return { ...EMPTY_SAVE_GAME };
     if (!Array.isArray(obj.completed)) return { ...EMPTY_SAVE_GAME };
     const completed = obj.completed.filter(
       (v): v is string => typeof v === 'string' && v.length > 0,
     );
-    return { version: 2, completed };
+    return { completed };
   } catch {
     return { ...EMPTY_SAVE_GAME };
   }
@@ -44,13 +39,13 @@ export function parseSaveGame(plaintext: string | undefined | null): SaveGame {
 
 /** Serialize for encryption. Stable shape, no timestamps. */
 export function serializeSaveGame(save: SaveGame): string {
-  return JSON.stringify({ version: 2, completed: save.completed });
+  return JSON.stringify({ completed: save.completed });
 }
 
 /** Insert a coordinate (de-duped). Returns the same instance if no change. */
 export function withCompletion(save: SaveGame, levelCoordinate: string): SaveGame {
   if (save.completed.includes(levelCoordinate)) return save;
-  return { version: 2, completed: [...save.completed, levelCoordinate] };
+  return { completed: [...save.completed, levelCoordinate] };
 }
 
 /**

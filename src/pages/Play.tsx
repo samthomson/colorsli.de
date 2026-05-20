@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
+import { nip19 } from 'nostr-tools';
 import { Template } from '@/components/Template';
 import { RequireLogin } from '@/components/auth/RequireLogin';
 import { LevelGrid } from '@/components/levels/LevelGrid';
@@ -7,7 +9,10 @@ import { LevelPlayer } from '@/components/levels/LevelPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCompletedLevels } from '@/hooks/useCompletedLevels';
+import { useLevelByCoordinate } from '@/hooks/useLevelByCoordinate';
 import { useOfficialLevels } from '@/hooks/useOfficialLevels';
+import { KINDS } from '@/lib/constants';
+import { buildLevelCoordinate } from '@/lib/coordinate';
 import type { ParsedLevel } from '@/lib/levelEvent';
 
 const Play = () => {
@@ -25,7 +30,76 @@ const Play = () => {
   );
 };
 
+/**
+ * Two modes:
+ *
+ *   1. **Standalone level via `?level=<naddr>`** — used by Discover's Play
+ *      button. Loads that single level by coordinate and plays it. Back
+ *      navigates to `/discover`.
+ *
+ *   2. **Official progression (no query param)** — the historical Play
+ *      experience: render the gated `LevelGrid`, advance to next on
+ *      completion. Back navigates within the grid.
+ */
 function PlayContent() {
+  const [params] = useSearchParams();
+  const levelParam = params.get('level');
+
+  const standaloneCoordinate = useMemo(() => {
+    if (!levelParam) return null;
+    try {
+      const decoded = nip19.decode(levelParam);
+      if (decoded.type !== 'naddr') return null;
+      const { kind, pubkey, identifier } = decoded.data;
+      if (kind !== KINDS.LEVEL) return null;
+      return buildLevelCoordinate(pubkey, identifier);
+    } catch {
+      return null;
+    }
+  }, [levelParam]);
+
+  if (levelParam) {
+    return <StandaloneLevel coordinate={standaloneCoordinate} />;
+  }
+
+  return <OfficialProgression />;
+}
+
+function StandaloneLevel({ coordinate }: { coordinate: string | null }) {
+  const navigate = useNavigate();
+  const query = useLevelByCoordinate(coordinate ?? undefined);
+
+  if (!coordinate) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          That play link doesn't look right. Browse community levels on Discover.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (query.isLoading) return <PlaySkeleton />;
+
+  if (query.isError || !query.data) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          Could not load that level. It may have been deleted, or your relay isn't carrying it.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <LevelPlayer
+      level={query.data}
+      onBack={() => navigate('/discover')}
+    />
+  );
+}
+
+function OfficialProgression() {
   const officialLevels = useOfficialLevels();
   const { completedCoordinates, isLoading: saveLoading } = useCompletedLevels();
   // Track the active level by addressable coordinate (stable across edits);
