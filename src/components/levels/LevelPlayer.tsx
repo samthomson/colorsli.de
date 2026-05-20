@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,10 +7,9 @@ import {
   LevelCompleteDialog,
   type SaveStatus,
 } from '@/components/levels/LevelCompleteDialog';
-import { MusicToggle } from '@/components/levels/MusicToggle';
 import { YouTubeBackground } from '@/components/levels/YouTubeBackground';
 import { useAppContext } from '@/hooks/useAppContext';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
 import { usePublishCompletion } from '@/hooks/usePublishCompletion';
 import { useUpdateSaveGame } from '@/hooks/useUpdateSaveGame';
 import type { ParsedLevel } from '@/lib/levelEvent';
@@ -48,7 +47,15 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
   // Press-Start splash gate. Held here so the music toggle in the header
   // can be hidden until the player has actually launched the level
   // (showing it pre-start looks weird — there's nothing to toggle yet).
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useSessionStorage<boolean>('colorslide:audio-unlocked', false);
+  const [, setLevelMusicActive] = useSessionStorage<boolean>('colorslide:level-music-active', false);
+
+  // Tell the app-wide menu-music layer when a level's own YouTube track is active.
+  useEffect(() => {
+    const active = Boolean(level.youtubeUrl) && started;
+    setLevelMusicActive(active);
+    return () => setLevelMusicActive(false);
+  }, [level.youtubeUrl, started, setLevelMusicActive]);
 
   const runSave = useCallback(
     async (r: CompletionResult) => {
@@ -127,9 +134,6 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
           <ArrowLeft className="h-4 w-4" />
           Back to levels
         </Button>
-        {level.youtubeUrl && started && (
-          <MusicToggle unmuted={musicUnmuted} onChange={setMusicUnmuted} />
-        )}
       </div>
 
       <ColourSlideGame

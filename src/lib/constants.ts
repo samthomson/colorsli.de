@@ -90,6 +90,7 @@ export const ENV = {
       ],
     },
     blossom: ['https://blossom.primal.net/'],
+    menuMusicUrl: 'https://www.youtube.com/watch?v=r_p3e-dRkZg',
   },
   PROD: {
     relays: {
@@ -97,6 +98,7 @@ export const ENV = {
       read: ['wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
     },
     blossom: ['https://blossom.primal.net/'],
+    menuMusicUrl: 'https://www.youtube.com/watch?v=r_p3e-dRkZg',
   },
 } as const;
 

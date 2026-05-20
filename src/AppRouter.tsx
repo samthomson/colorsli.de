@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { MenuMusicLayer } from "./components/MenuMusicLayer";
 
 import Index from "./pages/Index";
 import Play from "./pages/Play";
@@ -14,6 +15,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <MenuMusicLayer />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/play" element={<Play />} />

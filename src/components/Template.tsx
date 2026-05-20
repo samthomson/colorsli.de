@@ -5,7 +5,9 @@ import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/Arc
 import { BrandLogo } from '@/components/BrandLogo';
 import { CirclesBackground } from '@/components/CirclesBackground';
 import { PendingEventsBadge } from '@/components/PendingEventsBadge';
+import { MusicToggle } from '@/components/levels/MusicToggle';
 import { LoginArea } from '@/components/auth/LoginArea';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 type TemplateProps = {
   pageName?: string;
@@ -22,6 +24,11 @@ export function Template({
   showExit = true,
   brandVariant = 'page',
 }: TemplateProps) {
+  const [musicUnmuted, setMusicUnmuted] = useLocalStorage<boolean>(
+    'colorslide:music-unmuted',
+    true,
+  );
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#fff5e6] text-[#2a1050]">
       <CirclesBackground />
@@ -38,6 +45,7 @@ export function Template({
           </ArcadePill>
         ) : <span aria-hidden />}
         <div className="flex items-center gap-2">
+          <MusicToggle unmuted={musicUnmuted} onChange={setMusicUnmuted} />
           <PendingEventsBadge />
           <LoginArea className="max-w-60" />
         </div>

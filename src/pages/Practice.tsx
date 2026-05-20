@@ -1,15 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSeoMeta } from '@unhead/react';
 import { Template } from '@/components/Template';
 import { ColourSlideGame } from '@/components/ColourSlideGame';
-import { MusicToggle } from '@/components/levels/MusicToggle';
 import { YouTubeBackground } from '@/components/levels/YouTubeBackground';
 import {
   LevelCompleteDialog,
   type SaveStatus,
 } from '@/components/levels/LevelCompleteDialog';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
 import type { CompletionResult } from '@/components/ColourSlideGame';
 
 /**
@@ -35,9 +34,16 @@ const Practice = () => {
     true,
   );
 
-  // Press-Start splash gate (lifted so the music toggle can be hidden until
-  // the player has actually launched the board — hiding mirrors LevelPlayer).
-  const [started, setStarted] = useState(false);
+  // Press-Start splash gate — shared with LevelPlayer via session storage.
+  const [started, setStarted] = useSessionStorage<boolean>('colorslide:audio-unlocked', false);
+  const [, setLevelMusicActive] = useSessionStorage<boolean>('colorslide:level-music-active', false);
+
+  // Signal MenuMusicLayer that practice music is active.
+  useEffect(() => {
+    const active = started;
+    setLevelMusicActive(active);
+    return () => setLevelMusicActive(false);
+  }, [started, setLevelMusicActive]);
 
   // Bumping `gameKey` force-remounts ColourSlideGame, generating a fresh
   // random board (used by the "Play Again" CTA in the completion modal).
@@ -53,12 +59,6 @@ const Practice = () => {
   return (
     <Template pageName="Practice" subtitle="Random boards. No saving, no scoring — just play.">
       <div className="relative flex flex-col items-center gap-6">
-        <div className="flex w-full justify-end">
-          {started && (
-            <MusicToggle unmuted={musicUnmuted} onChange={setMusicUnmuted} />
-          )}
-        </div>
-
         <ColourSlideGame
           key={gameKey}
           onComplete={(r) => setResult(r)}
