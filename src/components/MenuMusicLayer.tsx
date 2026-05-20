@@ -3,7 +3,7 @@ import { Play } from 'lucide-react';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { BrandLogo } from '@/components/BrandLogo';
 import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
-import { ACTIVE } from '@/lib/constants';
+import { MENU_MUSIC_URL } from '@/lib/constants';
 import { buildYouTubeEmbedUrl, extractYouTubeId } from '@/lib/youtube';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ export function MenuMusicLayer() {
   const shouldRenderOverlay = !started;
   const shouldRenderMusic = started && !levelMusicActive;
 
-  const videoId = extractYouTubeId(ACTIVE.menuMusicUrl);
+  const videoId = extractYouTubeId(MENU_MUSIC_URL);
   const src = videoId
     ? buildYouTubeEmbedUrl(videoId, { muted: !unmuted })
     : null;

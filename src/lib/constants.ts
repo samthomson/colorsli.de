@@ -69,6 +69,7 @@ export const TAGS = {
 } as const;
 
 export const GAME_URL = 'https://colorsli.de';
+export const MENU_MUSIC_URL = 'https://www.youtube.com/watch?v=r_p3e-dRkZg';
 
 /**
  * One config per environment. Each branch holds the relay sets (read +
@@ -90,7 +91,6 @@ export const ENV = {
       ],
     },
     blossom: ['https://blossom.primal.net/'],
-    menuMusicUrl: 'https://www.youtube.com/watch?v=r_p3e-dRkZg',
   },
   PROD: {
     relays: {
@@ -98,7 +98,6 @@ export const ENV = {
       read: ['wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
     },
     blossom: ['https://blossom.primal.net/'],
-    menuMusicUrl: 'https://www.youtube.com/watch?v=r_p3e-dRkZg',
   },
 } as const;
 
