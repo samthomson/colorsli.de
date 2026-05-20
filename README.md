@@ -86,6 +86,7 @@ verify:
   - [ ] yee haw / yee yaw; rotating in 3d puzzle plane, maybe not rotating but flipping 180 degrees up down, or left right every x seconds
   - [ ] kusama
   - [ ] tibetan theme
+  - [ ] matrix theme (custom tiles, weird matrix unicodes, green of course)
 
 special tiles / levels:
 - [ ] eyes, which reveal other colors, until which they can't be cleared
