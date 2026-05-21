@@ -70,7 +70,6 @@ whatever. it's open source.
 
 ## ✅ TODO
 
-
 - [ ] level ideas
   - [ ] 60s; color changing
   - [ ] moving boards
@@ -84,7 +83,6 @@ whatever. it's open source.
   - [ ] emojis
 
 special tiles / levels:
-- [ ] eyes, which reveal other colors, until which they can't be cleared
 - [ ] color changing
 - [ ] custom circles (tiles?); ie set your own things (images? colors? emojis?)
 - [ ] some kind of shuffling dynamic (where either on an interval piece swap/reshuffle or in response to shuffle types being cleared)
