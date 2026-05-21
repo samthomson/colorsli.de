@@ -71,9 +71,6 @@ whatever. it's open source.
 ## ✅ TODO
 
 
-verify:
-- [ ] publish score / level completion
-
 - [ ] level ideas
   - [ ] 60s; color changing
   - [ ] moving boards
@@ -109,6 +106,7 @@ features:
 - [ ] emotional support blobbi
 - [ ] funky favicon
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
+- [ ] kind 1, 'completed' not 'cleared'
 
 unsorted:
 - [ ] custom sounds, eg goldeneye sounds
