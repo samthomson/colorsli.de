@@ -90,14 +90,14 @@ export const ENV = {
         'wss://relay.nostr.band',
       ],
     },
-    blossom: ['https://blossom.primal.net/'],
+    blossom: ['https://dev-blossom.colorsli.de/'],
   },
   PROD: {
     relays: {
-      write: ['wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
-      read: ['wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
+      write: ['wss://relay.colorsli.de', 'wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
+      read: ['wss://relay.colorsli.de', 'wss://relay.ditto.pub', 'wss://relay.primal.net', 'wss://relay.damus.io'],
     },
-    blossom: ['https://blossom.primal.net/'],
+    blossom: ['https://blossom.colorsli.de/'],
   },
 } as const;
 
