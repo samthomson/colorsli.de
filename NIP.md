@@ -66,6 +66,12 @@ Stringified JSON:
     - `{ type: "color", value: "<hex>" }`
     - `{ type: "image", url: "<https url>", sha256?: "<hex>", alt?: "<text>" }`
     - `{ type: "emoji", value: "<glyph>" }`
+    - `{ type: "changer", values: ["<hex>", "<hex>", ...], periodMs: <int> }`
+      — a "color changer": animates through `values` (≥ 2 hex colors)
+      at `periodMs` per color. All instances of the same tile stay in
+      phase (the current index is derived from `Date.now() / periodMs`).
+      Matching is by tile id, so the changer counts as one logical tile
+      gameplay-wise.
   - `behavior` — optional gameplay role. Discriminated by `type`:
     - `{ type: "normal" }` (default if omitted)
     - `{ type: "treasure", group: "<id>" }` — when 4 of these clear,
@@ -100,13 +106,14 @@ revision per coordinate anyway; the client-side dedupe is defense-in-depth.
 
 ---
 
-## Kind 37284 — Color Slide reusable image tile (addressable)
+## Kind 37284 — Color Slide reusable tile (addressable)
 
-A user-owned uploaded-image sprite that can be picked from a personal
-library when building levels. Created automatically the first time the
-user adds a new image tile in the editor.
+A user-owned reusable sprite (uploaded image OR color-cycling tile)
+that can be picked from a personal library when building levels.
+Created automatically the first time the user adds a new image /
+color-changer tile in the editor.
 
-Only image tiles get library entries:
+Only image and color-changer tiles get library entries:
 
 - **Color tiles** — the hex IS the id; infinite variety at zero cost.
 - **Emoji tiles** — universal Unicode; the editor's built-in picker is
@@ -116,26 +123,39 @@ Only image tiles get library entries:
 
 The level event still embeds a full snapshot of its palette, so play
 does NOT depend on resolving these events. The library is purely a
-"remember my uploaded images" facet.
+"remember my custom tiles" facet.
 
 ### d-tag
 
-`d` is the in-palette tile id: `img:<sha256>`, content-addressed from
-the Blossom hash. Re-uploading the same image collapses to a replacement
+`d` is the in-palette tile id:
+
+- **Image**: `img:<sha256>`, content-addressed from the Blossom hash.
+- **Color changer**: `changer:<periodMs>:<v1>-<v2>-...`, deterministic from the
+  ordered colors + period so the same spec dedupes.
+
+Re-saving a sprite with the same id replaces the previous revision
 (NIP-01 addressable semantics).
 
 ### Tags
 
-- `["d", "img:<sha256>"]` — required.
+- `["d", "<tile-id>"]` — required.
 - `["t", "colorslide"]` — required.
 - `["t", "colorslide-tile"]` — required, identifies the event as a tile.
 - `["title", "<label>"]` — optional, user-given friendly name.
 - `["alt", "Color Slide tile: <summary> (https://colorsli.de)"]` —
   required NIP-31 alt text.
+
+Image-only tags:
+
 - `["image", "<url>"]` — the Blossom URL.
 - `["x", "<sha256>"]` — the content hash.
 - `["alt-text", "<text>"]` — accessibility text (kept separate from the
   NIP-31 `alt` because it describes the *image*, not the event).
+
+Color-changer-only tags:
+
+- `["changer-period", "<ms>"]` — the period in milliseconds.
+- `["changer-color", "<hex>"]` — one per color, in order.
 
 ### Content
 
@@ -146,6 +166,15 @@ Stringified JSON containing the `TileKind` minus the `behavior` field:
   "id": "img:8e9a...",
   "sprite": { "type": "image", "url": "https://...", "sha256": "8e9a...", "alt": "My cat" },
   "label": "Mittens"
+}
+```
+
+For a color-changer tile:
+
+```json
+{
+  "id": "changer:1500:#ef4444-#f59e0b-#3b82f6",
+  "sprite": { "type": "changer", "values": ["#ef4444", "#f59e0b", "#3b82f6"], "periodMs": 1500 }
 }
 ```
 

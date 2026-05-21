@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { TileSprite } from '@/components/TileSprite';
+import { useColorChanger } from '@/hooks/useColorChanger';
 import { useTileLibrary } from '@/hooks/useTileLibrary';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
@@ -73,35 +74,14 @@ export function TileLibraryDialog({ paletteIds, onPick }: Props) {
           </div>
         ) : library.data && library.data.length > 0 ? (
           <div className="grid max-h-96 grid-cols-6 gap-2 overflow-y-auto pr-1 sm:grid-cols-8">
-            {library.data.map((entry) => {
-              const tile = entry.tile;
-              const already = paletteIds.has(tile.id);
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => handle(tile)}
-                  className={cn(
-                    'relative flex aspect-square items-center justify-center overflow-hidden rounded-full border-2 transition-all',
-                    already
-                      ? 'border-emerald-400 opacity-60'
-                      : 'border-slate-200 hover:scale-110 hover:border-slate-900',
-                  )}
-                  style={{ backgroundColor: tileBackgroundColor(tile) }}
-                  title={tile.label ?? tile.id}
-                  aria-label={tile.label ?? tile.id}
-                >
-                  <span className="absolute inset-0">
-                    <TileSprite tile={tile} />
-                  </span>
-                  {already && (
-                    <span className="absolute inset-x-0 bottom-0 bg-emerald-500/80 py-0.5 text-center text-[8px] font-bold uppercase tracking-wider text-white">
-                      in palette
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {library.data.map((entry) => (
+              <LibrarySwatch
+                key={entry.id}
+                tile={entry.tile}
+                already={paletteIds.has(entry.tile.id)}
+                onClick={() => handle(entry.tile)}
+              />
+            ))}
           </div>
         ) : (
           <EmptyState
@@ -110,6 +90,46 @@ export function TileLibraryDialog({ paletteIds, onPick }: Props) {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LibrarySwatch({
+  tile,
+  already,
+  onClick,
+}: {
+  tile: TileKind;
+  already: boolean;
+  onClick: () => void;
+}) {
+  const liveColor = useColorChanger(tile);
+  const bg = liveColor ?? tileBackgroundColor(tile);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative flex aspect-square items-center justify-center overflow-hidden rounded-full border-2 transition-all',
+        already
+          ? 'border-emerald-400 opacity-60'
+          : 'border-slate-200 hover:scale-110 hover:border-slate-900',
+      )}
+      style={{
+        backgroundColor: bg,
+        ...(liveColor !== null ? { transition: 'background-color 600ms ease-in-out, transform 200ms, border-color 200ms' } : null),
+      }}
+      title={tile.label ?? tile.id}
+      aria-label={tile.label ?? tile.id}
+    >
+      <span className="absolute inset-0">
+        <TileSprite tile={tile} />
+      </span>
+      {already && (
+        <span className="absolute inset-x-0 bottom-0 bg-emerald-500/80 py-0.5 text-center text-[8px] font-bold uppercase tracking-wider text-white">
+          in palette
+        </span>
+      )}
+    </button>
   );
 }
 

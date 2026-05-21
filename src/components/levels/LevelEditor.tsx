@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { TileSprite } from '@/components/TileSprite';
+import { ColorPickerPopover } from '@/components/ColorPickerPopover';
+import { useColorChanger } from '@/hooks/useColorChanger';
+import { AddColorChangerDialog } from '@/components/levels/AddColorChangerDialog';
 import { AddEmojiTileDialog } from '@/components/levels/AddEmojiTileDialog';
 import { AddLogicTilesDialog } from '@/components/levels/AddLogicTilesDialog';
 import { ImageToBoardDialog } from '@/components/levels/ImageToBoardDialog';
@@ -146,11 +149,14 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
     });
     setActiveTile(tile);
 
-    // Only image tiles get library entries. Emojis are universal Unicode
-    // — no per-user data, infinite variety at zero cost; the editor's
-    // built-in emoji picker is enough. Color tiles are skipped for the
-    // same reason. Behavior tiles are level-scoped and never persisted.
-    const shouldPersist = !tile.behavior && tile.sprite.type === 'image';
+    // Image and color-changer tiles get library entries. Emojis are universal
+    // Unicode — no per-user data, infinite variety at zero cost; the
+    // editor's built-in emoji picker is enough. Color tiles are skipped
+    // for the same reason. Behavior tiles are level-scoped and never
+    // persisted.
+    const shouldPersist =
+      !tile.behavior &&
+      (tile.sprite.type === 'image' || tile.sprite.type === 'changer');
     if (shouldPersist) {
       void publishTile(tile).catch((err) => {
         console.error('tile library publish failed', err);
@@ -444,6 +450,8 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
 
           <AddEmojiTileDialog onAdd={addCustomTile} />
 
+          <AddColorChangerDialog onAdd={addCustomTile} />
+
           <TileLibraryDialog
             paletteIds={paletteIdSet}
             onPick={addCustomTile}
@@ -458,41 +466,21 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
         <div>
           <p className="arcade-label mb-2 text-[11px] text-slate-600">Palette</p>
           <div className="flex flex-wrap items-center gap-2">
-            {palette.map(tile => {
-              const isActive = activeTile?.id === tile.id;
-              const behavior = tile.behavior;
-              return (
-                <button
-                  key={tile.id}
-                  type="button"
-                  onClick={() => setActiveTile(tile)}
-                  className={cn(
-                    'relative h-9 w-9 rounded-full border-2 transition-all',
-                    isActive
-                      ? 'scale-110 border-slate-900 shadow-md'
-                      : 'border-white/60 hover:scale-105',
-                  )}
-                  style={{ backgroundColor: tileBackgroundColor(tile) }}
-                  aria-label={tileLabel(tile)}
-                  aria-pressed={isActive}
-                  title={tileLabel(tile)}
-                >
-                  <span className="absolute inset-0 overflow-hidden rounded-full">
-                    <TileSprite tile={tile} />
-                  </span>
-                  {behavior?.type === 'treasure' && (
-                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-white shadow ring-2 ring-white">
-                      <Sparkles className="h-2.5 w-2.5" />
-                    </span>
-                  )}
-                  {behavior?.type === 'hidden' && (
-                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white shadow ring-2 ring-white">
-                      <Eye className="h-2.5 w-2.5" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {palette.map(tile => (
+              <PaletteSwatch
+                key={tile.id}
+                tile={tile}
+                isActive={activeTile?.id === tile.id}
+                onClick={() => setActiveTile(tile)}
+                label={tileLabel(tile)}
+              />
+            ))}
+            <ColorPickerPopover
+              onPick={(hex) => {
+                addPaletteColors([hex]);
+                setActiveTile(defaultColorTile(hex));
+              }}
+            />
             <button
               type="button"
               onClick={() => setActiveTile(null)}
@@ -557,31 +545,16 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
                   const blocked = isBlocked(r, c);
                   const tile = cellId ? tiles[cellId] ?? null : null;
                   return (
-                    <button
+                    <EditorBoardCell
                       key={`${r}-${c}`}
-                      type="button"
-                      onMouseDown={(e) => { e.preventDefault(); handleCellPress(r, c); }}
-                      onMouseEnter={() => handleCellEnter(r, c)}
-                      onTouchStart={(e) => { e.preventDefault(); handleCellPress(r, c); }}
-                      className={cn(
-                        'relative rounded-full border-2 border-transparent transition-all overflow-hidden',
-                        cellId ? '' : 'border-dashed border-slate-300 bg-transparent',
-                        blocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
-                      )}
-                      style={{
-                        width: cellSizePx,
-                        height: cellSizePx,
-                        backgroundColor: tileBackgroundColor(tile),
-                      }}
-                      aria-label={`Cell ${r + 1}-${c + 1}${cellId ? '' : ' (empty)'}${blocked ? ' (part of a 4+ run)' : ''}`}
-                    >
-                      <TileSprite tile={tile} />
-                      {blocked && (
-                        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                          !
-                        </span>
-                      )}
-                    </button>
+                      tile={tile}
+                      cellId={cellId}
+                      blocked={blocked}
+                      sizePx={cellSizePx}
+                      onPress={() => handleCellPress(r, c)}
+                      onEnter={() => handleCellEnter(r, c)}
+                      ariaLabel={`Cell ${r + 1}-${c + 1}${cellId ? '' : ' (empty)'}${blocked ? ' (part of a 4+ run)' : ''}`}
+                    />
                   );
                 }),
               )}
@@ -602,12 +575,7 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
                     const ok = count % 4 === 0;
                     return (
                       <li key={id} className="flex items-center gap-2">
-                        <span
-                          className="relative inline-block h-4 w-4 overflow-hidden rounded-full border border-white/50"
-                          style={{ backgroundColor: tileBackgroundColor(tile ?? null) }}
-                        >
-                          <TileSprite tile={tile ?? null} />
-                        </span>
+                        <ValidationSwatch tile={tile ?? null} />
                         <span className="font-mono text-xs">{tileLabel(tile)}</span>
                         <span className={cn('arcade-label ml-auto text-[10px]', ok ? 'text-emerald-600' : 'text-red-600')}>
                           {count} {ok ? 'ok' : `(need +${4 - (count % 4)})`}
@@ -661,10 +629,125 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
 
 /** Short human-readable label for a tile (used in aria-labels, tooltips,
  * and the validation panel). */
+type PaletteSwatchProps = {
+  tile: TileKind;
+  isActive: boolean;
+  onClick: () => void;
+  label: string;
+};
+
+function PaletteSwatch({ tile, isActive, onClick, label }: PaletteSwatchProps) {
+  const liveColor = useColorChanger(tile);
+  const bg = liveColor ?? tileBackgroundColor(tile);
+  const isChanging = liveColor !== null;
+  const behavior = tile.behavior;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative h-9 w-9 rounded-full border-2 transition-all',
+        isActive
+          ? 'scale-110 border-slate-900 shadow-md'
+          : 'border-white/60 hover:scale-105',
+      )}
+      style={{
+        backgroundColor: bg,
+        ...(isChanging ? { transition: 'background-color 600ms ease-in-out, transform 200ms' } : null),
+      }}
+      aria-label={label}
+      aria-pressed={isActive}
+      title={label}
+    >
+      <span className="absolute inset-0 overflow-hidden rounded-full">
+        <TileSprite tile={tile} />
+      </span>
+      {behavior?.type === 'treasure' && (
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-white shadow ring-2 ring-white">
+          <Sparkles className="h-2.5 w-2.5" />
+        </span>
+      )}
+      {behavior?.type === 'hidden' && (
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white shadow ring-2 ring-white">
+          <Eye className="h-2.5 w-2.5" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+type EditorBoardCellProps = {
+  tile: TileKind | null;
+  cellId: TileId | null;
+  blocked: boolean;
+  sizePx: number;
+  onPress: () => void;
+  onEnter: () => void;
+  ariaLabel: string;
+};
+
+function EditorBoardCell({
+  tile,
+  cellId,
+  blocked,
+  sizePx,
+  onPress,
+  onEnter,
+  ariaLabel,
+}: EditorBoardCellProps) {
+  const liveColor = useColorChanger(tile);
+  const bg = liveColor ?? tileBackgroundColor(tile);
+  const isChanging = liveColor !== null;
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onPress(); }}
+      onMouseEnter={onEnter}
+      onTouchStart={(e) => { e.preventDefault(); onPress(); }}
+      className={cn(
+        'relative rounded-full border-2 border-transparent transition-all overflow-hidden',
+        cellId ? '' : 'border-dashed border-slate-300 bg-transparent',
+        blocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
+      )}
+      style={{
+        width: sizePx,
+        height: sizePx,
+        backgroundColor: bg,
+        ...(isChanging ? { transition: 'background-color 600ms ease-in-out' } : null),
+      }}
+      aria-label={ariaLabel}
+    >
+      <TileSprite tile={tile} />
+      {blocked && (
+        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+          !
+        </span>
+      )}
+    </button>
+  );
+}
+
+function ValidationSwatch({ tile }: { tile: TileKind | null }) {
+  const liveColor = useColorChanger(tile);
+  const bg = liveColor ?? tileBackgroundColor(tile);
+  return (
+    <span
+      className="relative inline-block h-4 w-4 overflow-hidden rounded-full border border-white/50"
+      style={{
+        backgroundColor: bg,
+        ...(liveColor !== null ? { transition: 'background-color 600ms ease-in-out' } : null),
+      }}
+    >
+      <TileSprite tile={tile} />
+    </span>
+  );
+}
+
 function tileLabel(tile: TileKind | undefined): string {
   if (!tile) return 'Empty';
   if (tile.label) return tile.label;
   if (tile.sprite.type === 'color') return tile.sprite.value;
   if (tile.sprite.type === 'image') return tile.sprite.alt ?? 'Image tile';
+  if (tile.sprite.type === 'changer') return `Color changer (${tile.sprite.values.length} colors)`;
   return 'Emoji tile';
 }

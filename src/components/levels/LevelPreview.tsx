@@ -7,6 +7,7 @@ import {
   type TilePalette,
 } from '@/lib/tile';
 import { TileSprite } from '@/components/TileSprite';
+import { useColorChanger } from '@/hooks/useColorChanger';
 
 type LevelPreviewProps = {
   board: Board;
@@ -43,17 +44,25 @@ export function LevelPreview({ board, tiles, className }: LevelPreviewProps) {
           const tile: TileKind = tiles
             ? lookupTile(tiles, cellId)
             : { id: cellId, sprite: { type: 'color', value: cellId } };
-          return (
-            <div
-              key={`${r}-${c}`}
-              className="relative aspect-square overflow-hidden rounded-full"
-              style={{ backgroundColor: tileBackgroundColor(tile) }}
-            >
-              <TileSprite tile={tile} />
-            </div>
-          );
+          return <PreviewCell key={`${r}-${c}`} tile={tile} />;
         }),
       )}
+    </div>
+  );
+}
+
+function PreviewCell({ tile }: { tile: TileKind }) {
+  const liveColor = useColorChanger(tile);
+  const bg = liveColor ?? tileBackgroundColor(tile);
+  return (
+    <div
+      className="relative aspect-square overflow-hidden rounded-full"
+      style={{
+        backgroundColor: bg,
+        ...(liveColor !== null ? { transition: 'background-color 600ms ease-in-out' } : null),
+      }}
+    >
+      <TileSprite tile={tile} />
     </div>
   );
 }

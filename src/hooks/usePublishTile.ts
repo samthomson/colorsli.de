@@ -27,9 +27,10 @@ export function usePublishTile() {
   return useCallback(
     async (tile: TileKind) => {
       if (!user) return null;
-      // Only image tiles get library entries. Color = hex (infinite,
-      // free), emoji = universal Unicode (built-in picker is enough).
-      if (tile.sprite.type !== 'image') return null;
+      // Only image and color-changer tiles get library entries. Color
+      // = hex (infinite, free), emoji = universal Unicode (built-in
+      // picker is enough).
+      if (tile.sprite.type !== 'image' && tile.sprite.type !== 'changer') return null;
 
       const template = buildTileTemplate(tile);
       const event = await reliablePublish(template, {

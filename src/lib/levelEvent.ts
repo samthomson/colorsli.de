@@ -240,6 +240,13 @@ function sanitizeSprite(value: unknown): TileKind['sprite'] | null {
     }
     case 'emoji':
       return typeof v.value === 'string' ? { type: 'emoji', value: v.value } : null;
+    case 'changer': {
+      if (!Array.isArray(v.values)) return null;
+      const values = v.values.filter((x): x is string => typeof x === 'string' && x.length > 0);
+      if (values.length < 2) return null;
+      const periodMs = typeof v.periodMs === 'number' && v.periodMs > 0 ? v.periodMs : 1500;
+      return { type: 'changer', values, periodMs };
+    }
     default:
       return null;
   }

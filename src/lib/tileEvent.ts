@@ -2,19 +2,22 @@
  * Encode / decode helpers for Color Slide *tile* events (kind 37284,
  * addressable).
  *
- * Each tile event is one uploaded image sprite owned by a user. The
- * level editor publishes one whenever the user adds a new image tile,
- * so the same image can be picked from the user's library on future
- * levels. Levels still embed a full snapshot of their tile palette in
- * the level event's content, so play doesn't require resolving extra
- * events — tile events are purely a "library" facet.
+ * Each tile event is one reusable sprite owned by a user — currently
+ * either an uploaded image OR a multi-color "color changer" tile. The
+ * level editor publishes one whenever the user adds a new image /
+ * color changer, so the same sprite can be picked from the user's
+ * library on future levels. Levels still embed a full snapshot of
+ * their tile palette in the level event's content, so play doesn't
+ * require resolving extra events — tile events are purely a "library"
+ * facet.
  *
  * Color and emoji tiles never get library entries: color = the hex IS
  * the id (infinite, free), emoji = universal Unicode (no per-user data
  * worth persisting; a built-in picker is enough).
  *
- * d-tag = the in-palette tile id (`img:<sha256>`). Re-uploading the
- * same image refreshes the same event.
+ * d-tag = the in-palette tile id (`img:<sha256>` or
+ * `changer:<periodMs>:<v1>-<v2>-...`). Re-saving the same sprite spec
+ * refreshes the same event.
  *
  * Content: JSON containing the full `TileKind` minus the `behavior`
  * field (behavior is level-scoped — `treasure` / `hidden` only make
@@ -53,8 +56,8 @@ export type ParsedTile = {
  */
 export function buildTileTemplate(tile: TileKind): TileEventTemplate {
   const sprite = tile.sprite;
-  if (sprite.type !== 'image') {
-    throw new Error('Only image tiles get library entries — color is the hex itself; emoji is universal Unicode.');
+  if (sprite.type !== 'image' && sprite.type !== 'changer') {
+    throw new Error('Only image and color-changer tiles get library entries — color is the hex itself; emoji is universal Unicode.');
   }
 
   const labelTag: string[][] = tile.label ? [['title', tile.label]] : [];
@@ -68,12 +71,16 @@ export function buildTileTemplate(tile: TileKind): TileEventTemplate {
     ['alt', `Color Slide tile: ${altSummary} (${GAME_URL})`],
   ];
 
-  // Image tiles also carry their URL / hash as top-level tags so a relay
-  // operator (or a generic browser) can see what's stored without
-  // parsing content.
-  tags.push(['image', sprite.url]);
-  if (sprite.sha256) tags.push(['x', sprite.sha256]);
-  if (sprite.alt) tags.push(['alt-text', sprite.alt]);
+  // Sprite-type-specific top-level tags so a relay operator (or a
+  // generic browser) can see what's stored without parsing content.
+  if (sprite.type === 'image') {
+    tags.push(['image', sprite.url]);
+    if (sprite.sha256) tags.push(['x', sprite.sha256]);
+    if (sprite.alt) tags.push(['alt-text', sprite.alt]);
+  } else {
+    tags.push(['changer-period', String(sprite.periodMs)]);
+    for (const v of sprite.values) tags.push(['changer-color', v]);
+  }
 
   // Strip behavior — level-scoped, not library-scoped.
   const { behavior: _behavior, ...rest } = tile;
@@ -108,7 +115,7 @@ export function parseTileEvent(event: NostrEvent): ParsedTile | null {
   const raw = parsed as Record<string, unknown>;
   const sprite = sanitizeSprite(raw.sprite);
   if (!sprite) return null;
-  if (sprite.type !== 'image') return null;
+  if (sprite.type !== 'image' && sprite.type !== 'changer') return null;
 
   const id = typeof raw.id === 'string' && raw.id ? raw.id : dTag;
   const label = typeof raw.label === 'string' ? raw.label : undefined;
@@ -142,11 +149,19 @@ function sanitizeSprite(value: unknown): SpriteRef | null {
       return typeof v.value === 'string' && v.value.length > 0
         ? { type: 'emoji', value: v.value }
         : null;
+    case 'changer': {
+      if (!Array.isArray(v.values)) return null;
+      const values = v.values.filter((x): x is string => typeof x === 'string' && x.length > 0);
+      if (values.length < 2) return null;
+      const periodMs = typeof v.periodMs === 'number' && v.periodMs > 0 ? v.periodMs : 1500;
+      return { type: 'changer', values, periodMs };
+    }
     default:
       return null;
   }
 }
 
-function humanSummary(sprite: Extract<SpriteRef, { type: 'image' }>): string {
-  return sprite.alt ?? 'image';
+function humanSummary(sprite: Extract<SpriteRef, { type: 'image' | 'changer' }>): string {
+  if (sprite.type === 'image') return sprite.alt ?? 'image';
+  return `color changer (${sprite.values.length} colors)`;
 }

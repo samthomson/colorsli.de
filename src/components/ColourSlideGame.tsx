@@ -16,9 +16,11 @@ import {
   lookupTile,
   matchKeyBoard,
   tileBackgroundColor,
+  type TileKind,
   type TilePalette,
 } from '@/lib/tile';
 import { TileSprite } from '@/components/TileSprite';
+import { useColorChanger } from '@/hooks/useColorChanger';
 import { computeScore, formatTime } from '@/lib/scoring';
 
 /**
@@ -417,22 +419,17 @@ export function ColourSlideGame({
                   !revealed.has(tile.behavior.group);
 
                 return (
-                  <div
+                  <GameCell
                     key={`${rowIndex}-${colIndex}`}
-                    className={cn(
-                      'aspect-square rounded-full relative overflow-hidden',
-                      cellId ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
-                      isMatching && 'scale-125 animate-pulse shadow-lg',
-                      isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
-                      isDraggingThis ? 'transition-none' : 'transition-all duration-200',
-                      isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 shadow-xl scale-105',
-                      isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105',
-                      isHidden && 'bg-slate-700 dark:bg-slate-800',
-                    )}
-                    style={{
-                      backgroundColor: isHidden ? undefined : tileBackgroundColor(tile),
-                      transform,
-                    }}
+                    tile={tile}
+                    cellId={cellId}
+                    isHidden={isHidden}
+                    isMatching={isMatching}
+                    isBlocked={isBlocked}
+                    isDraggingRow={isDraggingRow}
+                    isDraggingCol={isDraggingCol}
+                    isDraggingThis={isDraggingThis}
+                    transform={transform}
                     onMouseDown={(e) => {
                       if (cellId) {
                         e.preventDefault();
@@ -445,20 +442,7 @@ export function ColourSlideGame({
                         handleMouseDown(rowIndex, colIndex, touch.clientX, touch.clientY);
                       }
                     }}
-                  >
-                    {isHidden ? (
-                      <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-300">
-                        ?
-                      </span>
-                    ) : (
-                      <TileSprite tile={tile} />
-                    )}
-                    {isBlocked && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-white text-xs font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">!</div>
-                      </div>
-                    )}
-                  </div>
+                  />
                 );
               })
             ))}
@@ -466,5 +450,78 @@ export function ColourSlideGame({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+type GameCellProps = {
+  tile: TileKind | null;
+  cellId: string | null;
+  isHidden: boolean;
+  isMatching: boolean;
+  isBlocked: boolean;
+  isDraggingRow: boolean;
+  isDraggingCol: boolean;
+  isDraggingThis: boolean;
+  transform: string;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onTouchStart: (e: React.TouchEvent) => void;
+};
+
+/**
+ * A single board cell. Extracted into its own component so it can call
+ * `useColorChanger` (which has to run per render, can't live inside
+ * a `.map()`). For color-changer tiles the live color overrides the static
+ * `tileBackgroundColor`, and a short CSS transition smooths the snap.
+ */
+function GameCell({
+  tile,
+  cellId,
+  isHidden,
+  isMatching,
+  isBlocked,
+  isDraggingRow,
+  isDraggingCol,
+  isDraggingThis,
+  transform,
+  onMouseDown,
+  onTouchStart,
+}: GameCellProps) {
+  const liveColor = useColorChanger(tile);
+  const bg = isHidden ? undefined : (liveColor ?? tileBackgroundColor(tile));
+  const isChanging = liveColor !== null && !isHidden;
+
+  return (
+    <div
+      className={cn(
+        'aspect-square rounded-full relative overflow-hidden',
+        cellId ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
+        isMatching && 'scale-125 animate-pulse shadow-lg',
+        isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
+        isDraggingThis ? 'transition-none' : 'transition-all duration-200',
+        isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 shadow-xl scale-105',
+        isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105',
+        isHidden && 'bg-slate-700 dark:bg-slate-800',
+      )}
+      style={{
+        backgroundColor: bg,
+        transform,
+        ...(isChanging ? { transition: 'background-color 600ms ease-in-out, transform 200ms' } : null),
+      }}
+      onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
+    >
+      {isHidden ? (
+        <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-300">
+          ?
+        </span>
+      ) : (
+        <TileSprite tile={tile} />
+      )}
+      {isBlocked && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-white text-xs font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">!</div>
+        </div>
+      )}
+    </div>
   );
 }

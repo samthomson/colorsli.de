@@ -17,7 +17,14 @@ import type { Board } from '@/lib/colorSlide';
 export type SpriteRef =
   | { type: 'color'; value: string }
   | { type: 'image'; url: string; sha256?: string; alt?: string }
-  | { type: 'emoji'; value: string };
+  | { type: 'emoji'; value: string }
+  /**
+   * A "color changer" — cycles through `values` (hex colors) at
+   * `periodMs` per color. All instances of the same tile stay in phase
+   * (the current color is derived from `Date.now()`), so every cell
+   * renders the same color at any given frame.
+   */
+  | { type: 'changer'; values: string[]; periodMs: number };
 
 /** Optional gameplay role for a tile. */
 export type TileBehavior =
@@ -74,6 +81,38 @@ export function imageTile(args: {
   return tile;
 }
 
+/** Minimum color-changer period (ms) — below this the animation is
+ * jarring and the timer overhead per tile gets silly. */
+export const MIN_CHANGER_PERIOD_MS = 250;
+/** Default color-changer period used by the editor dialog when the user
+ * doesn't touch the slider. Picked to feel "noticeable but not frantic". */
+export const DEFAULT_CHANGER_PERIOD_MS = 1500;
+
+/**
+ * Build a `TileKind` for a "color changer" tile (cycles through several
+ * colors). The id is derived from the canonical
+ * `<periodMs>:<v1>-<v2>-...` form so two changer tiles with the same
+ * colors-in-the-same-order and period dedupe in the palette / library.
+ */
+export function colorChangerTile(args: {
+  values: string[];
+  periodMs?: number;
+  label?: string;
+}): TileKind {
+  const values = args.values.map((v) => v.trim()).filter(Boolean);
+  if (values.length < 2) {
+    throw new Error('A color changer needs at least 2 colors.');
+  }
+  const periodMs = Math.max(MIN_CHANGER_PERIOD_MS, args.periodMs ?? DEFAULT_CHANGER_PERIOD_MS);
+  const id = `changer:${periodMs}:${values.join('-')}`;
+  const tile: TileKind = {
+    id,
+    sprite: { type: 'changer', values, periodMs },
+  };
+  if (args.label) tile.label = args.label;
+  return tile;
+}
+
 /**
  * Build a `TileKind` for an emoji glyph. The id is content-derived
  * (`emoji:<glyph>`) so adding the same emoji twice collapses to one
@@ -91,14 +130,17 @@ export function emojiTile(args: { value: string; label?: string }): TileKind {
 }
 
 /**
- * CSS background color for a tile, suitable for `style.backgroundColor`.
- * Color sprites paint their hex; image / emoji sprites use `transparent`
+ * Static fallback CSS background color for a tile (no live clock).
+ * Color sprites paint their hex; changer sprites paint their first
+ * color as a static preview; image / emoji sprites use `transparent`
  * so an overlay (see `TileSprite`) can sit on a neutral surface.
  *
  * Treasure color tiles also return `transparent` — the chest-icon overlay
  * from `TileSprite` takes on the tile's hex via `currentColor`, so the
- * cell silhouette becomes the chest shape rather than a flat disc. That
- * gives players an obvious visual cue for "clear 4 of these to unlock".
+ * cell silhouette becomes the chest shape rather than a flat disc.
+ *
+ * For live color-changing tiles, call `useColorChanger(tile)` in the
+ * cell renderer and prefer its return value when non-null.
  */
 export function tileBackgroundColor(tile: TileKind | null | undefined): string {
   if (!tile) return 'transparent';
@@ -106,7 +148,26 @@ export function tileBackgroundColor(tile: TileKind | null | undefined): string {
     if (tile.behavior?.type === 'treasure') return 'transparent';
     return tile.sprite.value;
   }
+  if (tile.sprite.type === 'changer') {
+    return tile.sprite.values[0] ?? 'transparent';
+  }
   return 'transparent';
+}
+
+/**
+ * Pure helper: the color a color-changer tile shows at a given
+ * timestamp (ms). All instances share the same phase because the
+ * index derives from the absolute clock, not a per-instance start time.
+ */
+export function colorChangerColorAt(
+  sprite: Extract<SpriteRef, { type: 'changer' }>,
+  nowMs: number,
+): string {
+  const { values, periodMs } = sprite;
+  if (values.length === 0) return 'transparent';
+  if (periodMs <= 0) return values[0];
+  const idx = Math.floor(nowMs / periodMs) % values.length;
+  return values[idx] ?? values[0];
 }
 
 /** Cheap-ish random id used as a fallback when a Blossom upload doesn't
