@@ -26,7 +26,7 @@ export function LoginArea({ className }: LoginAreaProps) {
           style={{ animationDelay: '1.4s' }}
         >
           <LogIn className={`${arcadePillIconSize('sm')} drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]`} />
-          Join
+          Nostr Login
         </ArcadePill>
       )}
 
