@@ -161,14 +161,25 @@ function OfficialProgression() {
   );
 }
 
+/** Mirrors the LevelGrid card: label + icon row, title, square preview, footer. */
 function PlaySkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="space-y-3 rounded-2xl border-2 border-slate-200/70 bg-white/60 p-4">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-32 w-full" />
+        <div
+          key={i}
+          className="flex flex-col gap-3 rounded-2xl border-2 border-cyan-200/50 bg-white/70 p-4 backdrop-blur"
+        >
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3 w-14" />
+            <Skeleton className="h-5 w-5 rounded-full" />
+          </div>
+          <Skeleton className="h-7 w-3/4" />
+          <Skeleton className="aspect-square w-full rounded-md" />
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-3 w-16" />
+          </div>
         </div>
       ))}
     </div>

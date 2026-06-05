@@ -43,5 +43,8 @@ export function useUserLevels(limit = 100) {
       parsed.sort((a, b) => b.event.created_at - a.event.created_at);
       return parsed;
     },
+    // Prefetched at app root; keep hot for the session so navigating to
+    // Discover reads from cache instantly instead of showing a skeleton.
+    staleTime: 5 * 60 * 1000,
   });
 }

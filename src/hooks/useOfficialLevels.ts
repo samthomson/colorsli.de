@@ -93,5 +93,8 @@ export function useOfficialLevels() {
 
       return { levels, orderedCoordinates, listEvent };
     },
+    // Prefetched at app root; keep hot for the session so Play / Discover
+    // read from cache instantly instead of showing a skeleton.
+    staleTime: 5 * 60 * 1000,
   });
 }

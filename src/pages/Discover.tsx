@@ -174,14 +174,25 @@ function LevelCard({
   );
 }
 
+/** Mirrors the Discover LevelCard: badge row, title, author, square preview,
+ *  full-width Play button, then a row of smaller action buttons. */
 function LevelListSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="space-y-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-32 w-full" />
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="space-y-3 rounded-xl border border-cyan-200/50 bg-white/70 p-6 backdrop-blur"
+        >
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-7 w-3/4" />
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="aspect-square w-full rounded-md" />
+          <Skeleton className="h-9 w-full rounded-full" />
+          <div className="flex justify-center gap-2">
+            <Skeleton className="h-8 w-20 rounded-full" />
+            <Skeleton className="h-8 w-20 rounded-full" />
+          </div>
         </div>
       ))}
     </div>
