@@ -2,6 +2,7 @@ import { memo, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { lookupTile, colorChangerColorAt, type TilePalette } from '@/lib/tile';
+import { useWindowActive } from '@/hooks/useWindowActive';
 import type { Board } from '@/lib/colorSlide';
 
 /**
@@ -281,10 +282,12 @@ function Spheres({ board, tiles, revealed, dragging, matching }: BubbleBoardGLPr
 }
 
 export const BubbleBoardGL = memo(function BubbleBoardGL(props: BubbleBoardGLProps) {
+  const active = useWindowActive();
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
       <Canvas
         orthographic
+        frameloop={active ? 'always' : 'never'}
         dpr={[1, 2]}
         style={{ pointerEvents: 'none' }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}

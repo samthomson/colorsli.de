@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useWindowActive } from '@/hooks/useWindowActive';
 
 const SPHERE_COUNT = 9000;
 const BOUNDS = { x: 36, y: 28, z: 24 };
@@ -222,10 +223,14 @@ function CameraRig() {
 }
 
 export const CirclesBackground = memo(function CirclesBackground() {
+  // Pause the (heavy) 9000-sphere render loop whenever the tab is hidden or
+  // the window loses focus — no point animating for nobody.
+  const active = useWindowActive();
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className="bubble-bg absolute inset-0" />
       <Canvas
+        frameloop={active ? 'always' : 'never'}
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 18], fov: 70, near: 0.1, far: 120 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
