@@ -103,6 +103,8 @@ features:
 - [ ] funky favicon
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
 - [ ] kind 1, 'completed' not 'cleared'
+- [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
+- [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it
 
 unsorted:
 - [ ] custom sounds, eg goldeneye sounds
