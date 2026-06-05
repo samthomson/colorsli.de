@@ -1,0 +1,17 @@
+{
+  "name": "Color Slide",
+  "short_name": "Color Slide",
+  "description": "Rot your brain and stimulate it at the same time.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1f3a",
+  "theme_color": "#0b1f3a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

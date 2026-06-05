@@ -88,7 +88,6 @@ special tiles / levels:
 
 features:
 - [ ] Add sound effects
-- [ ] funky favicon
 - [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
 - [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it
 - [ ] preload level list and discovery from teh start screen, so there's no loading later
