@@ -1,5 +1,5 @@
 import { Repeat2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArcadePill } from '@/components/ArcadePill';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useShareLevel } from '@/hooks/useShareLevel';
 import { useToast } from '@/hooks/useToast';
@@ -7,14 +7,14 @@ import type { ParsedLevel } from '@/lib/levelEvent';
 
 interface ShareLevelButtonProps {
   level: ParsedLevel;
-  variant?: 'default' | 'outline' | 'ghost';
-  size?: 'sm' | 'default' | 'lg';
+  tone?: 'cyan' | 'amber' | 'emerald' | 'red' | 'indigo' | 'rainbow';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 export function ShareLevelButton({ 
   level, 
-  variant = 'outline', 
+  tone = 'indigo', 
   size = 'sm',
   className 
 }: ShareLevelButtonProps) {
@@ -49,15 +49,15 @@ export function ShareLevelButton({
   };
 
   return (
-    <Button
-      variant={variant}
+    <ArcadePill
+      tone={tone}
       size={size}
       onClick={handleShare}
       disabled={isPending}
       className={className}
     >
-      <Repeat2 className="h-4 w-4" />
+      <Repeat2 />
       {isPending ? 'Sharing...' : 'Share'}
-    </Button>
+    </ArcadePill>
   );
 }

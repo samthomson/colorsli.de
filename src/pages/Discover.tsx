@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LevelPreview } from '@/components/levels/LevelPreview';
 import { ShareLevelButton } from '@/components/ShareLevelButton';
+import { ArcadePill } from '@/components/ArcadePill';
 import { AdminLevelControls } from '@/components/levels/AdminLevelControls';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -137,24 +138,24 @@ function LevelCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <LevelPreview board={level.board} tiles={level.tiles} />
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to={`/play?level=${naddr}`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 px-3 py-1 text-xs font-bold text-white shadow hover:from-cyan-400 hover:to-blue-500"
-          >
-            <PlayIcon className="h-3.5 w-3.5" />
-            Play
-          </Link>
-          <ShareLevelButton level={level} />
-          {isOwn && (
-            <Link
-              to={`/create?edit=${naddr}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/70 bg-white/80 px-3 py-1 text-xs font-bold text-cyan-800 hover:border-cyan-400 hover:bg-cyan-50"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
+        <div className="space-y-2">
+          <ArcadePill asChild tone="cyan" size="md" className="w-full justify-center">
+            <Link to={`/play?level=${naddr}`}>
+              <PlayIcon />
+              Play
             </Link>
-          )}
+          </ArcadePill>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <ShareLevelButton level={level} tone="emerald" />
+            {isOwn && (
+              <ArcadePill asChild tone="amber" size="sm">
+                <Link to={`/create?edit=${naddr}`}>
+                  <Pencil />
+                  Edit
+                </Link>
+              </ArcadePill>
+            )}
+          </div>
         </div>
         {showAdminControls && (
           <AdminLevelControls
