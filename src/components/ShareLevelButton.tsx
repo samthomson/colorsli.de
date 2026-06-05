@@ -1,4 +1,4 @@
-import { Share2 } from 'lucide-react';
+import { Repeat2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useShareLevel } from '@/hooks/useShareLevel';
@@ -56,7 +56,7 @@ export function ShareLevelButton({
       disabled={isPending}
       className={className}
     >
-      <Share2 className="h-4 w-4" />
+      <Repeat2 className="h-4 w-4" />
       {isPending ? 'Sharing...' : 'Share'}
     </Button>
   );
