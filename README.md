@@ -87,9 +87,6 @@ special tiles / levels:
 - [ ] countdown, where if you don't complete it time - you fail and have to restart
 
 features:
-- [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
-- [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it, but at present it looks like it's layered over the 'main' homepage. know what I mean? it should jsut be either or.
-- [ ] preload level list and discovery from teh start screen, so there's no loading later
 - [ ] slow, and the skeletons seem dumb (ie not matching what ends up loading)
 
 - [ ] zap a level author
