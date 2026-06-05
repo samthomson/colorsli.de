@@ -1,6 +1,7 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type PointerEvent, type ReactNode } from 'react';
 import { Slot } from 'radix-ui';
 import { cn } from '@/lib/utils';
+import { playClick } from '@/lib/sfx';
 
 /**
  * Reusable arcade-styled pill button.
@@ -166,16 +167,24 @@ export type ArcadePillProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export const ArcadePill = forwardRef<HTMLButtonElement, ArcadePillProps>(
   function ArcadePill(
-    { tone = 'cyan', size = 'sm', bob = true, block = false, asChild = false, className, ...rest },
+    { tone = 'cyan', size = 'sm', bob = true, block = false, asChild = false, className, onPointerDown, ...rest },
     ref,
   ) {
     const Comp = asChild ? Slot.Root : 'button';
     const t = TONE_STYLES[tone];
     const s = SIZE_STYLES[size];
 
+    // Tactile click feedback on press (snappier than waiting for click), then
+    // forward any caller-supplied handler. Respects the global sfx toggle.
+    const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+      playClick();
+      onPointerDown?.(e);
+    };
+
     return (
       <Comp
         ref={ref}
+        onPointerDown={handlePointerDown}
         className={cn(
           'arcade-pill group items-center justify-center rounded-full border-white/85 transition-all active:translate-y-0.5 disabled:pointer-events-none disabled:opacity-60',
           block

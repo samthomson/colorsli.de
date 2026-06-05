@@ -22,7 +22,7 @@ import { TileSprite } from '@/components/TileSprite';
 import { BubbleBoardGL } from '@/components/BubbleBoardGL';
 import { useColorChanger } from '@/hooks/useColorChanger';
 import { computeScore, formatTime } from '@/lib/scoring';
-import { playBurst, setSfxEnabled } from '@/lib/sfx';
+import { playBurst, playSlide, playComplete, setSfxEnabled } from '@/lib/sfx';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 /**
@@ -133,6 +133,11 @@ export function ColourSlideGame({
     }
     prevMatchCountRef.current = matching.length;
   }, [matching]);
+
+  // Celebratory fanfare on the rising edge of completion.
+  useEffect(() => {
+    if (isComplete) playComplete();
+  }, [isComplete]);
 
   // Note: when the parent navigates between levels it should remount this
   // component (e.g. with `key={level.id}`) rather than mutate `initialBoard`.
@@ -312,6 +317,7 @@ export function ColourSlideGame({
       });
 
       setMoveCount(prev => prev + 1);
+      playSlide();
       // Start the timer on the very first move (both modes).
       if (startedAt === null) {
         const t = Date.now();
