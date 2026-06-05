@@ -88,7 +88,6 @@ special tiles / levels:
 
 features:
 - [ ] Add sound effects
-- [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
 - [ ] fork/edit, delete your own levels
 - [ ] funky favicon
 - [ ] kind 1, 'completed' not 'cleared'
