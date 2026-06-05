@@ -274,6 +274,9 @@ export function ColourSlideGame({
           const colIndex = dragging.index % cols;
           newDragging = { ...newDragging, type: 'col', index: colIndex };
         }
+        // Axis just locked in — a soft tick so grabbing a row/col is audible
+        // even before it steps a full cell.
+        playSlide();
       }
     }
 

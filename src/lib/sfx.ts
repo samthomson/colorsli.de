@@ -137,7 +137,29 @@ export function playSlide(): void {
   if (ac.state === 'suspended') void ac.resume();
 
   const now = ac.currentTime;
-  const dur = 0.1;
+  const dur = 0.13;
+  const jitter = 0.9 + Math.random() * 0.2;
+
+  // Tonal layer: a quick downward glide gives the swipe a clear pitch so it
+  // cuts through over the busy board, instead of a faint hiss.
+  const osc = ac.createOscillator();
+  const oscGain = ac.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(680 * jitter, now);
+  osc.frequency.exponentialRampToValueAtTime(240 * jitter, now + dur);
+
+  const oscFilter = ac.createBiquadFilter();
+  oscFilter.type = 'lowpass';
+  oscFilter.frequency.setValueAtTime(1800, now);
+
+  oscGain.gain.setValueAtTime(0.0001, now);
+  oscGain.gain.exponentialRampToValueAtTime(0.16, now + 0.012);
+  oscGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(oscFilter).connect(oscGain).connect(ac.destination);
+  osc.start(now);
+  osc.stop(now + dur + 0.02);
+
+  // Noise layer: a band-passed swish sweeping down, for texture on top.
   const frames = Math.floor(ac.sampleRate * dur);
   const buffer = ac.createBuffer(1, frames, ac.sampleRate);
   const data = buffer.getChannelData(0);
@@ -145,22 +167,20 @@ export function playSlide(): void {
     const decay = 1 - i / frames;
     data[i] = (Math.random() * 2 - 1) * decay;
   }
-
   const noise = ac.createBufferSource();
   noise.buffer = buffer;
 
   const filter = ac.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.Q.value = 1.2;
-  const jitter = 0.9 + Math.random() * 0.2;
+  filter.Q.value = 0.9;
   filter.frequency.setValueAtTime(2400 * jitter, now);
-  filter.frequency.exponentialRampToValueAtTime(700 * jitter, now + dur);
+  filter.frequency.exponentialRampToValueAtTime(800 * jitter, now + dur);
 
-  const gain = ac.createGain();
-  gain.gain.setValueAtTime(0.07, now);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  const noiseGain = ac.createGain();
+  noiseGain.gain.setValueAtTime(0.12, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
-  noise.connect(filter).connect(gain).connect(ac.destination);
+  noise.connect(filter).connect(noiseGain).connect(ac.destination);
   noise.start(now);
   noise.stop(now + dur);
 }
