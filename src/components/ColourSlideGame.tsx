@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RotateCcw, Trophy, Settings2, Timer } from 'lucide-react';
+import { RotateCcw, Trophy, Settings2, Timer, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   type Board,
@@ -15,13 +15,15 @@ import {
   colorTilesFromBoard,
   lookupTile,
   matchKeyBoard,
-  tileBackgroundColor,
   type TileKind,
   type TilePalette,
 } from '@/lib/tile';
 import { TileSprite } from '@/components/TileSprite';
+import { BubbleBoardGL } from '@/components/BubbleBoardGL';
 import { useColorChanger } from '@/hooks/useColorChanger';
 import { computeScore, formatTime } from '@/lib/scoring';
+import { playBurst, setSfxEnabled } from '@/lib/sfx';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 /**
  * LLM maintenance notes:
@@ -115,6 +117,22 @@ export function ColourSlideGame({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
   const completionFiredRef = useRef(false);
+
+  const [soundOn, setSoundOn] = useLocalStorage<boolean>('colorslide:sfx', true);
+
+  useEffect(() => {
+    setSfxEnabled(soundOn);
+  }, [soundOn]);
+
+  // Play a burst sound on the rising edge of a match resolving (matching
+  // goes empty -> non-empty). Intensity scales with how many tiles cleared.
+  const prevMatchCountRef = useRef(0);
+  useEffect(() => {
+    if (matching.length > 0 && prevMatchCountRef.current === 0) {
+      playBurst(Math.min(1, matching.length / 4));
+    }
+    prevMatchCountRef.current = matching.length;
+  }, [matching]);
 
   // Note: when the parent navigates between levels it should remount this
   // component (e.g. with `key={level.id}`) rather than mutate `initialBoard`.
@@ -357,6 +375,21 @@ export function ColourSlideGame({
             <span className="tabular-nums text-foreground">{formatTime(elapsedSeconds)}</span>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setSoundOn((v) => !v)}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? 'Mute sound effects' : 'Enable sound effects'}
+            className={cn(
+              'rounded-full border p-1.5 transition-colors',
+              soundOn
+                ? 'border-cyan-600 bg-cyan-500 text-white'
+                : 'border-slate-300 bg-white/70 text-slate-500 hover:border-cyan-400',
+            )}
+          >
+            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </button>
+
           {!isLevelMode && (
             <ArcadePill
               tone="slate"
@@ -401,6 +434,13 @@ export function ColourSlideGame({
           }}
           onTouchEnd={handleMouseUp}
         >
+          <BubbleBoardGL
+            board={board}
+            tiles={tiles}
+            revealed={revealed}
+            dragging={dragging}
+            matching={matching}
+          />
           <div
             data-grid
             className="grid gap-1 select-none"
@@ -408,7 +448,6 @@ export function ColourSlideGame({
           >
             {board.map((row, rowIndex) => (
               row.map((cellId, colIndex) => {
-                const isMatching = matching.some(m => m.row === rowIndex && m.col === colIndex);
                 const isBlocked = blocked.some(b => b.row === rowIndex && b.col === colIndex);
                 const isDraggingRow = dragging?.type === 'row' && dragging?.index === rowIndex;
                 const isDraggingCol = dragging?.type === 'col' && dragging?.index === colIndex;
@@ -431,7 +470,6 @@ export function ColourSlideGame({
                     tile={tile}
                     cellId={cellId}
                     isHidden={isHidden}
-                    isMatching={isMatching}
                     isBlocked={isBlocked}
                     isDraggingRow={isDraggingRow}
                     isDraggingCol={isDraggingCol}
@@ -464,7 +502,6 @@ type GameCellProps = {
   tile: TileKind | null;
   cellId: string | null;
   isHidden: boolean;
-  isMatching: boolean;
   isBlocked: boolean;
   isDraggingRow: boolean;
   isDraggingCol: boolean;
@@ -476,15 +513,19 @@ type GameCellProps = {
 
 /**
  * A single board cell. Extracted into its own component so it can call
- * `useColorChanger` (which has to run per render, can't live inside
- * a `.map()`). For color-changer tiles the live color overrides the static
- * `tileBackgroundColor`, and a short CSS transition smooths the snap.
+ * `useColorChanger` (which has to run per render, can't live inside a
+ * `.map()`).
+ *
+ * The cell is the interaction + layout surface only. Plain color / color-
+ * changer tiles render transparent here — the `BubbleBoardGL` WebGL canvas
+ * paints them as 3D spheres on top. Non-color sprites (image, emoji,
+ * treasure chest, hidden "?") always render in the DOM so the canvas only
+ * owns the bubbles.
  */
 function GameCell({
   tile,
   cellId,
   isHidden,
-  isMatching,
   isBlocked,
   isDraggingRow,
   isDraggingCol,
@@ -493,27 +534,29 @@ function GameCell({
   onMouseDown,
   onTouchStart,
 }: GameCellProps) {
-  const liveColor = useColorChanger(tile);
-  const bg = isHidden ? undefined : (liveColor ?? tileBackgroundColor(tile));
-  const isChanging = liveColor !== null && !isHidden;
+  // Subscribe to changer ticks so the WebGL canvas re-reads the live color at
+  // each boundary (the canvas resolves the actual hue itself per frame).
+  useColorChanger(tile);
+
+  const isColorish =
+    !isHidden &&
+    tile != null &&
+    ((tile.sprite.type === 'color' && tile.behavior?.type !== 'treasure') ||
+      tile.sprite.type === 'changer');
 
   return (
     <div
       className={cn(
-        'aspect-square rounded-full relative overflow-hidden',
+        'aspect-square rounded-full relative',
         cellId ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
-        isMatching && 'scale-125 animate-pulse shadow-lg',
         isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
         isDraggingThis ? 'transition-none' : 'transition-all duration-200',
-        isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 shadow-xl scale-105',
-        isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 shadow-xl scale-105',
-        isHidden && 'bg-slate-700 dark:bg-slate-800',
+        isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 scale-105',
+        isDraggingCol && !isBlocked && 'ring-2 ring-blue-500 scale-105',
+        isHidden && 'bg-slate-700 dark:bg-slate-800 overflow-hidden',
+        !isColorish && !isHidden && 'overflow-hidden',
       )}
-      style={{
-        backgroundColor: bg,
-        transform,
-        ...(isChanging ? { transition: 'background-color 600ms ease-in-out, transform 200ms' } : null),
-      }}
+      style={{ transform }}
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
     >
@@ -521,7 +564,7 @@ function GameCell({
         <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-300">
           ?
         </span>
-      ) : (
+      ) : isColorish ? null : (
         <TileSprite tile={tile} />
       )}
       {isBlocked && (
