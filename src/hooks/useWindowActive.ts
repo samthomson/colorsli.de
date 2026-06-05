@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 
 /**
- * True while the tab is visible AND the window has focus. Flips to false when
- * the user switches tabs or focuses another window/app, so continuous
- * render loops (the 3D background, the bubble board) can pause and stop
- * burning GPU/battery while nobody's looking.
+ * True while the tab is *visible* (foreground). Flips to false only when the
+ * tab is actually hidden — the user switches to another tab or minimizes —
+ * so continuous render loops (the 3D background, the bubble board) can pause
+ * and stop burning GPU/battery while nobody's looking.
+ *
+ * Deliberately keyed to `document.hidden` only, NOT `document.hasFocus()`:
+ * focus can be elsewhere (DevTools open, another app on screen) while the
+ * game is still fully visible and being interacted with. Gating on focus
+ * froze the WebGL board mid-drag (`frameloop='never'` stops rendering even
+ * on prop changes), so the CSS cells moved but the bubbles stayed put.
  */
 export function useWindowActive(): boolean {
   const [active, setActive] = useState(() =>
@@ -12,15 +18,11 @@ export function useWindowActive(): boolean {
   );
 
   useEffect(() => {
-    const update = () => setActive(!document.hidden && document.hasFocus());
+    const update = () => setActive(!document.hidden);
     document.addEventListener('visibilitychange', update);
-    window.addEventListener('focus', update);
-    window.addEventListener('blur', update);
     update();
     return () => {
       document.removeEventListener('visibilitychange', update);
-      window.removeEventListener('focus', update);
-      window.removeEventListener('blur', update);
     };
   }, []);
 
