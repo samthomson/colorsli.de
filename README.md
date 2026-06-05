@@ -87,7 +87,6 @@ special tiles / levels:
 - [ ] countdown, where if you don't complete it time - you fail and have to restart
 
 features:
-- [ ] share a level
 - [ ] Add sound effects
 - [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
 - [ ] fork/edit, delete your own levels
