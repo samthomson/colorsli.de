@@ -33,7 +33,7 @@ export function usePublishCompletion() {
     async (args: PublishCompletionArgs) => {
       const { levelCoordinate, levelTitle, score, seconds, moves } = args;
       const summary =
-        `Cleared "${levelTitle}" in Color Slide -> ${score} pts, ` +
+        `Completed "${levelTitle}" in Color Slide: ${score} pts, ` +
         `${formatTime(seconds)}, ${moves} moves. Play at ${GAME_URL}`;
 
       setIsPending(true);

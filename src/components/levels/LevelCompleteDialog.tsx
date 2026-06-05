@@ -78,11 +78,11 @@ export function LevelCompleteDialog({
           <p className="arcade-label text-[11px] text-slate-600/80">★ {levelTitle} ★</p>
           <DialogTitle asChild>
             <h2 className="brand-arcade-title mt-2 bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
-              Level Complete
+              Level Completed
             </h2>
           </DialogTitle>
           <DialogDescription className="sr-only">
-            You cleared {levelTitle}
+            You completed {levelTitle}
           </DialogDescription>
         </div>
 
