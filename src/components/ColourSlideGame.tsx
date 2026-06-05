@@ -81,6 +81,13 @@ export function ColourSlideGame({
     () => initialBoard?.map(row => [...row]) ?? createRandomBoard(10),
   );
 
+  // Real board dimensions. Levels can be non-square (rows !== cols), so all
+  // index/geometry math must use these rather than the single `gridSize`
+  // (which only drives the practice-mode square selector). Slides preserve
+  // dimensions, so these are stable for the lifetime of a board.
+  const rows = board.length;
+  const cols = board[0]?.length ?? 0;
+
   // Tile palette: stick with whatever was provided in level mode; for
   // practice mode we synthesize default color tiles from the random
   // board's cell hex strings (color tile id === hex, so this is identity).
@@ -218,7 +225,7 @@ export function ColourSlideGame({
   const handleMouseDown = (rowIndex: number, colIndex: number, clientX: number, clientY: number) => {
     setDragging({
       type: 'undecided',
-      index: rowIndex * gridSize + colIndex,
+      index: rowIndex * cols + colIndex,
       startX: clientX,
       startY: clientY,
       offsetX: 0,
@@ -238,10 +245,10 @@ export function ColourSlideGame({
       const absY = Math.abs(offsetY);
       if (absX > 5 || absY > 5) {
         if (absX > absY) {
-          const rowIndex = Math.floor(dragging.index / gridSize);
+          const rowIndex = Math.floor(dragging.index / cols);
           newDragging = { ...newDragging, type: 'row', index: rowIndex };
         } else {
-          const colIndex = dragging.index % gridSize;
+          const colIndex = dragging.index % cols;
           newDragging = { ...newDragging, type: 'col', index: colIndex };
         }
       }
@@ -253,7 +260,7 @@ export function ColourSlideGame({
     const gridElement = document.querySelector('[data-grid]');
     if (!gridElement) return;
     const rect = gridElement.getBoundingClientRect();
-    const cellSize = newDragging.type === 'row' ? rect.width / gridSize : rect.height / gridSize;
+    const cellSize = newDragging.type === 'row' ? rect.width / cols : rect.height / rows;
     const threshold = cellSize * 0.7;
     const offset = newDragging.type === 'row' ? offsetX : offsetY;
 
@@ -382,7 +389,7 @@ export function ColourSlideGame({
       <CardContent>
         <div
           className="relative mx-auto"
-          style={{ maxWidth: `${Math.min(600, gridSize * 50)}px` }}
+          style={{ maxWidth: `${Math.min(600, cols * 50)}px` }}
           onMouseMove={(e) => handleMouseMove(e.clientX, e.clientY)}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -397,7 +404,7 @@ export function ColourSlideGame({
           <div
             data-grid
             className="grid gap-1 select-none"
-            style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
           >
             {board.map((row, rowIndex) => (
               row.map((cellId, colIndex) => {
