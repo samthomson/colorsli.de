@@ -131,6 +131,7 @@ const SPHERE_FRAGMENT = /* glsl */ `
 
 function Spheres() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const timeRef = useRef(0);
   const spheres = useMemo(generateSpheres, []);
 
   const colorArray = useMemo(() => {
@@ -153,12 +154,17 @@ function Spheres() {
     });
   }, []);
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_state, delta) => {
     const mesh = meshRef.current;
     if (!mesh) return;
 
-    const t = clock.getElapsedTime();
+    // Accumulate our own clamped time so pausing (frameloop "never" while the
+    // tab is hidden) and resuming doesn't jump: the big delta on the first
+    // frame back is clamped, so the scene continues where it left off rather
+    // than fast-forwarding by the whole away-duration.
     const dt = Math.min(delta, 0.05);
+    timeRef.current += dt;
+    const t = timeRef.current;
 
     for (let i = 0; i < SPHERE_COUNT; i++) {
       const s = spheres[i];
@@ -212,8 +218,11 @@ function Spheres() {
 }
 
 function CameraRig() {
-  useFrame(({ camera, clock }) => {
-    const t = clock.getElapsedTime() * 0.04;
+  const timeRef = useRef(0);
+  useFrame((state, delta) => {
+    timeRef.current += Math.min(delta, 0.05);
+    const t = timeRef.current * 0.04;
+    const { camera } = state;
     camera.position.x = Math.sin(t) * 5 + Math.sin(t * 2.7) * 2;
     camera.position.y = Math.cos(t * 0.8) * 4 + Math.cos(t * 1.9) * 1.5;
     camera.position.z = 18 + Math.sin(t * 0.5) * 4;

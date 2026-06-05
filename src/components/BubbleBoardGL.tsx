@@ -121,6 +121,7 @@ type CellState = {
 function Spheres({ board, tiles, revealed, dragging, matching }: BubbleBoardGLProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const cellStatesRef = useRef<Map<string, CellState>>(new Map());
+  const timeRef = useRef(0);
 
   const rows = board.length;
   const cols = board[0]?.length ?? 0;
@@ -149,10 +150,14 @@ function Spheres({ board, tiles, revealed, dragging, matching }: BubbleBoardGLPr
     [],
   );
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const mesh = meshRef.current;
     if (!mesh) return;
     if (rows === 0 || cols === 0) return;
+
+    // Clamped accumulator (see CirclesBackground) so pause/resume on tab
+    // switch continues smoothly instead of fast-forwarding the wobble/burst.
+    timeRef.current += Math.min(delta, 0.05);
 
     const W = state.size.width;
     const Hpx = state.size.height;
@@ -177,7 +182,7 @@ function Spheres({ board, tiles, revealed, dragging, matching }: BubbleBoardGLPr
     const cellH = (Hpx - GRID_GAP_PX * (rows - 1)) / rows;
     const baseR = (Math.min(cellW, cellH) / 2) * 0.94;
 
-    const t = state.clock.getElapsedTime();
+    const t = timeRef.current;
     const matchSet = new Set(matching.map((m) => `${m.row}-${m.col}`));
     const states = cellStatesRef.current;
     const { dummy, color } = scratch;
