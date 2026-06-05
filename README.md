@@ -90,6 +90,13 @@ features:
 - [ ] share a level
 - [ ] Add sound effects
 - [ ] nice effects on teh circles, including when bursting, and noises. can they be 3d actually?
+- [ ] fork/edit, delete your own levels
+- [ ] funky favicon
+- [ ] kind 1, 'completed' not 'cleared'
+- [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
+- [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it
+- [ ] preload level list and discovery from teh start screen, so there's no loading later
+
 - [ ] zap a level author
 - [ ] level designer: button to randomly fill the remainder
 - [ ] espy color picker
@@ -98,15 +105,10 @@ features:
 - [ ] scoring
 
 - [ ] multilingual
-- [ ] fork/edit, delete your own levels
 - [ ] emotional support blobbi
-- [ ] funky favicon
 - [ ] can every level event kind be rendered into a ogimage preview automatically, showing the board?
-- [ ] kind 1, 'completed' not 'cleared'
-- [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
-- [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it
+
 
 unsorted:
 - [ ] custom sounds, eg goldeneye sounds
 - [ ] put my profile pic somewhere below but near the game, and add some wheels that spin when I slide, so its like I'm sliding things.
-- [ ] preload level list and discovery from teh start screen, so there's no loading later
