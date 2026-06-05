@@ -19,7 +19,7 @@ const Create = () => {
   });
 
   return (
-    <Template pageName="Create" subtitle="Design a board, validate it, publish it to Nostr.">
+    <Template>
       <RequireLogin message="Log in with Nostr to publish your own levels.">
         <CreateContent />
       </RequireLogin>

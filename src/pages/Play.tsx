@@ -22,7 +22,7 @@ const Play = () => {
   });
 
   return (
-    <Template pageName="Play" subtitle="Beat each level to unlock the next.">
+    <Template>
       <RequireLogin message="Log in with Nostr to play levels and save your scores.">
         <PlayContent />
       </RequireLogin>
@@ -153,11 +153,16 @@ function OfficialProgression() {
   }
 
   return (
-    <LevelGrid
-      levels={levels}
-      completedCoordinates={completedCoordinates}
-      onSelect={(level) => setActiveCoordinate(level.coordinate)}
-    />
+    <div className="space-y-4">
+      <div className="mx-auto w-fit rounded-full border border-cyan-200/60 bg-white/70 px-4 py-1.5 text-center text-xs font-medium text-slate-700 backdrop-blur">
+        Beat each level to unlock the next.
+      </div>
+      <LevelGrid
+        levels={levels}
+        completedCoordinates={completedCoordinates}
+        onSelect={(level) => setActiveCoordinate(level.coordinate)}
+      />
+    </div>
   );
 }
 

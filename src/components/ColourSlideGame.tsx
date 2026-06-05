@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RotateCcw, Trophy, Settings2, Timer, Volume2, VolumeX } from 'lucide-react';
@@ -67,6 +67,8 @@ export type ColourSlideGameProps = {
    * don't gate on a splash continue to work unchanged.
    */
   started?: boolean;
+  /** Optional controls rendered in the card footer (e.g. back/share/fork). */
+  footer?: ReactNode;
 };
 
 export function ColourSlideGame({
@@ -75,6 +77,7 @@ export function ColourSlideGame({
   levelLabel,
   onComplete,
   started = true,
+  footer,
 }: ColourSlideGameProps = {}) {
   const isLevelMode = initialBoard !== undefined;
 
@@ -339,7 +342,7 @@ export function ColourSlideGame({
   };
 
   return (
-    <Card className="w-full max-w-4xl shadow-2xl">
+    <Card className="w-full max-w-4xl border-white/70 bg-gradient-to-br from-white via-cyan-50/70 to-indigo-50/70 shadow-2xl">
       <CardHeader className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
@@ -429,32 +432,39 @@ export function ColourSlideGame({
       </CardHeader>
 
       <CardContent>
+        {/* Soft tinted glass "play tray" — light and airy so the board feels
+            calm, with just enough tint + inset to make the neon 3D bubbles
+            read. Padding lives here (outer) so the WebGL canvas, which spans
+            the inner relative box, stays pixel-aligned with the grid. */}
         <div
-          className="relative mx-auto"
-          style={{ maxWidth: `${Math.min(600, cols * 50)}px` }}
-          onMouseMove={(e) => handleMouseMove(e.clientX, e.clientY)}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchMove={(e) => {
-            if (dragging) {
-              const touch = e.touches[0];
-              handleMouseMove(touch.clientX, touch.clientY);
-            }
-          }}
-          onTouchEnd={handleMouseUp}
+          className="mx-auto overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-100/70 via-sky-100/60 to-violet-100/70 p-3 shadow-[inset_0_1px_14px_rgba(79,70,229,0.14)] ring-1 ring-white/70 sm:p-4"
+          style={{ maxWidth: `${Math.min(600, cols * 50) + 32}px` }}
         >
-          <BubbleBoardGL
-            board={board}
-            tiles={tiles}
-            revealed={revealed}
-            dragging={dragging}
-            matching={matching}
-          />
           <div
-            data-grid
-            className="grid gap-1 select-none"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            className="relative"
+            onMouseMove={(e) => handleMouseMove(e.clientX, e.clientY)}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchMove={(e) => {
+              if (dragging) {
+                const touch = e.touches[0];
+                handleMouseMove(touch.clientX, touch.clientY);
+              }
+            }}
+            onTouchEnd={handleMouseUp}
           >
+            <BubbleBoardGL
+              board={board}
+              tiles={tiles}
+              revealed={revealed}
+              dragging={dragging}
+              matching={matching}
+            />
+            <div
+              data-grid
+              className="grid gap-1 select-none"
+              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            >
             {board.map((row, rowIndex) => (
               row.map((cellId, colIndex) => {
                 const isBlocked = blocked.some(b => b.row === rowIndex && b.col === colIndex);
@@ -500,9 +510,11 @@ export function ColourSlideGame({
                 );
               })
             ))}
+            </div>
           </div>
         </div>
       </CardContent>
+      {footer ? <CardFooter className="pt-2">{footer}</CardFooter> : null}
     </Card>
   );
 }
@@ -557,7 +569,7 @@ function GameCell({
     <div
       className={cn(
         'aspect-square rounded-full relative',
-        cellId ? 'cursor-move' : 'border-2 border-dashed border-gray-300 dark:border-gray-600',
+        cellId ? 'cursor-move' : 'border-2 border-dashed border-indigo-300/50',
         isBlocked && 'ring-2 ring-red-500 ring-offset-1 animate-pulse',
         isDraggingThis ? 'transition-none' : 'transition-all duration-200',
         isDraggingRow && !isBlocked && 'ring-2 ring-cyan-500 scale-105',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArcadePill } from '@/components/ArcadePill';
 import { ColourSlideGame, type CompletionResult } from '@/components/ColourSlideGame';
 import { ShareLevelButton } from '@/components/ShareLevelButton';
 import { ForkLevelButton } from '@/components/levels/ForkLevelButton';
@@ -136,23 +136,6 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
 
   return (
     <div className="relative flex flex-col items-center gap-6">
-      <div className="flex w-full flex-wrap items-center justify-between gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="arcade-label gap-1 text-[10px]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to levels
-        </Button>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <ShareLevelButton level={level} />
-          <ForkLevelButton level={level} tone="indigo" />
-          {isOwn && <DeleteLevelButton level={level} tone="red" onDeleted={onBack} />}
-        </div>
-      </div>
-
       {hasMusic && !started ? (
         <PressStartScreen onStart={() => setStarted(true)} />
       ) : (
@@ -163,6 +146,19 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
           levelLabel={level.title}
           onComplete={handleComplete}
           started
+          footer={
+            <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              <ArcadePill tone="slate" size="sm" onClick={onBack}>
+                <ArrowLeft />
+                Levels
+              </ArcadePill>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <ShareLevelButton level={level} tone="emerald" />
+                <ForkLevelButton level={level} tone="indigo" />
+                {isOwn && <DeleteLevelButton level={level} tone="red" onDeleted={onBack} />}
+              </div>
+            </div>
+          }
         />
       )}
 

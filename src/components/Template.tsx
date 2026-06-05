@@ -11,16 +11,12 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { cn } from '@/lib/utils';
 
 type TemplateProps = {
-  pageName?: string;
-  subtitle?: string;
   children: ReactNode;
   showExit?: boolean;
   brandVariant?: 'hero' | 'page';
 };
 
 export function Template({
-  pageName,
-  subtitle,
   children,
   showExit = true,
   brandVariant = 'page',
@@ -47,6 +43,21 @@ export function Template({
             </Link>
           </ArcadePill>
         ) : <span aria-hidden />}
+
+        {/* The game wordmark lives in the otherwise-empty center of the header
+            on content pages (hero/home shows the big wordmark in the body). */}
+        {!isHero ? (
+          <Link
+            to="/"
+            aria-label="Color Slide home"
+            className="absolute left-1/2 top-2 hidden -translate-x-1/2 sm:top-3 md:block"
+          >
+            <span className="brand-arcade-title inline-block whitespace-nowrap bg-clip-text text-3xl leading-none text-transparent sm:text-4xl lg:text-5xl">
+              Color Slide
+            </span>
+          </Link>
+        ) : null}
+
         <div className="flex items-center gap-2">
           <MusicToggle unmuted={musicUnmuted} onChange={setMusicUnmuted} />
           <PendingEventsBadge />
@@ -54,31 +65,30 @@ export function Template({
         </div>
       </header>
 
-      {/* Content floats directly over the bubble background. Only the brand
-          block sits on a frosted plate, sized to hug the wordmark so the
-          background stays visible around it. Hero pages (home) vertically
-          center so the whole menu lands above the fold. */}
+      {/* Hero (home): content floats directly on the bubble background, with
+          only a tight brand plate. Content pages: everything sits on a
+          frosted panel so text + controls stay legible over the busy
+          background. */}
       <main
         className={cn(
           'relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-4 pb-8 pt-4 sm:px-6 sm:pt-6',
           isHero && 'justify-center gap-6 sm:gap-8',
         )}
       >
-        <div className="w-fit max-w-full px-2 py-1 text-center sm:px-4">
-          <BrandLogo variant={brandVariant} />
-          {pageName ? (
-            <p className="arcade-label text-haloed mt-3 text-center text-[11px] text-slate-800 sm:text-xs">
-              — {pageName} —
-            </p>
-          ) : null}
-          {subtitle ? (
-            <p className="arcade-label text-haloed mt-2 text-center text-[10px] tracking-[0.18em] text-slate-900 sm:text-xs">
-              {subtitle}
-            </p>
-          ) : null}
-        </div>
-
-        <div className={cn('w-full', !isHero && 'mt-6 sm:mt-8')}>{children}</div>
+        {isHero ? (
+          <>
+            <div className="w-fit max-w-full px-2 py-1 text-center sm:px-4">
+              <BrandLogo variant={brandVariant} />
+            </div>
+            <div className="w-full">{children}</div>
+          </>
+        ) : (
+          <>
+            {/* Content pages: title sits in the header center; the content
+                area is just the page's own surfaces (cards / pills). */}
+            <div className="w-full">{children}</div>
+          </>
+        )}
       </main>
     </div>
   );

@@ -59,7 +59,7 @@ const Practice = () => {
   const saveStatus: SaveStatus = 'idle';
 
   return (
-    <Template pageName="Practice" subtitle="Random boards. No saving, no scoring — just play.">
+    <Template>
       {!started ? (
         <PressStartScreen onStart={() => setStarted(true)} />
       ) : (

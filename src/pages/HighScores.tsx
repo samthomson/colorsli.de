@@ -24,7 +24,7 @@ const HighScores = () => {
   });
 
   return (
-    <Template pageName="High Scores" subtitle="Top runs from across Nostr.">
+    <Template>
       <Tabs defaultValue="global" className="w-full">
         <TabsList className="grid w-full max-w-sm grid-cols-2">
           <TabsTrigger value="global" className="arcade-label text-[11px]">Global</TabsTrigger>

@@ -28,10 +28,7 @@ const Discover = () => {
   });
 
   return (
-    <Template
-      pageName="Discover"
-      subtitle="Community-published levels. Play the official progression on Play."
-    >
+    <Template>
       <DiscoverContent />
     </Template>
   );
