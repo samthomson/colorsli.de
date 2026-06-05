@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Play } from 'lucide-react';
 import { ArcadePill, ArcadePillIcon, arcadePillIconSize } from '@/components/ArcadePill';
 import { BrandLogo } from '@/components/BrandLogo';
+import { CirclesBackground } from '@/components/CirclesBackground';
 import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
 import { MENU_MUSIC_URL } from '@/lib/constants';
 import { buildYouTubeEmbedUrl, extractYouTubeId } from '@/lib/youtube';
-import { cn } from '@/lib/utils';
 
 /**
  * App-wide menu music layer.
@@ -82,14 +82,14 @@ export function MenuMusicLayer() {
       )}
 
       {shouldRenderOverlay && (
-        <div
-          className={cn(
-            'fixed inset-0 z-50 flex items-center justify-center px-6 backdrop-blur-[2px]',
-            'bg-gradient-to-br from-[#fff5e6]/95 via-[#fff5e6]/92 to-cyan-100/88',
-          )}
-        >
-          <div className="flex w-full max-w-2xl flex-col items-center gap-8 rounded-3xl border-2 border-white/80 bg-white/35 p-6 shadow-[0_8px_40px_rgba(120,60,200,0.18)] sm:p-10">
-            <BrandLogo variant="hero" />
+        <div className="fixed inset-0 z-50 overflow-hidden bg-[#fff5e6] text-[#2a1050]">
+          {/* Own bubble background so this reads as the home screen rather than
+              a hazy wash over whatever route is mounted behind it. */}
+          <CirclesBackground />
+          <div className="relative z-10 flex min-h-full flex-col items-center justify-center gap-8 px-6 py-10">
+            <div className="w-fit max-w-full px-2 py-1 text-center sm:px-4">
+              <BrandLogo variant="hero" />
+            </div>
             <ArcadePill
               tone="rainbow"
               size="2xl"

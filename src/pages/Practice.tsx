@@ -4,6 +4,7 @@ import { useSeoMeta } from '@unhead/react';
 import { Template } from '@/components/Template';
 import { ColourSlideGame } from '@/components/ColourSlideGame';
 import { YouTubeBackground } from '@/components/levels/YouTubeBackground';
+import { PressStartScreen } from '@/components/levels/PressStartScreen';
 import {
   LevelCompleteDialog,
   type SaveStatus,
@@ -27,9 +28,10 @@ const Practice = () => {
     description: 'Warm up on randomly generated boards.',
   });
 
-  // Shared key with LevelPlayer so the player's mute preference is sticky
-  // across both modes — toggle once, stays toggled everywhere.
-  const [musicUnmuted, setMusicUnmuted] = useLocalStorage<boolean>(
+  // Shared key with LevelPlayer / the header MusicToggle so the player's mute
+  // preference is sticky across modes. Read-only here; the toggle lives in
+  // the Template header.
+  const [musicUnmuted] = useLocalStorage<boolean>(
     'colorslide:music-unmuted',
     true,
   );
@@ -58,21 +60,23 @@ const Practice = () => {
 
   return (
     <Template pageName="Practice" subtitle="Random boards. No saving, no scoring — just play.">
-      <div className="relative flex flex-col items-center gap-6">
-        <ColourSlideGame
-          key={gameKey}
-          onComplete={(r) => setResult(r)}
-          started={started}
-        />
+      {!started ? (
+        <PressStartScreen onStart={() => setStarted(true)} />
+      ) : (
+        <div className="relative flex flex-col items-center gap-6">
+          <ColourSlideGame
+            key={gameKey}
+            onComplete={(r) => setResult(r)}
+            started
+          />
+        </div>
+      )}
 
-        <YouTubeBackground
-          url={PRACTICE_MUSIC_URL}
-          unmuted={musicUnmuted}
-          onUnmutedChange={setMusicUnmuted}
-          started={started}
-          onStartedChange={setStarted}
-        />
-      </div>
+      <YouTubeBackground
+        url={PRACTICE_MUSIC_URL}
+        unmuted={musicUnmuted}
+        started={started}
+      />
 
       <LevelCompleteDialog
         open={result !== null}

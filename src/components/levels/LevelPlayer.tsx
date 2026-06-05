@@ -11,11 +11,13 @@ import {
   type SaveStatus,
 } from '@/components/levels/LevelCompleteDialog';
 import { YouTubeBackground } from '@/components/levels/YouTubeBackground';
+import { PressStartScreen } from '@/components/levels/PressStartScreen';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
 import { usePublishCompletion } from '@/hooks/usePublishCompletion';
 import { useUpdateSaveGame } from '@/hooks/useUpdateSaveGame';
+import { extractYouTubeId } from '@/lib/youtube';
 import type { ParsedLevel } from '@/lib/levelEvent';
 
 type LevelPlayerProps = {
@@ -37,15 +39,19 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
   const { user } = useCurrentUser();
   const isOwn = user?.pubkey === level.pubkey;
   const { config, updateConfig } = useAppContext();
+
+  // Only levels with background music need the audio-autoplay Start gate.
+  // Music-less levels play immediately (controls visible right away).
+  const hasMusic = Boolean(extractYouTubeId(level.youtubeUrl));
   const updateSaveGame = useUpdateSaveGame();
   const { publishCompletion } = usePublishCompletion();
 
   const [result, setResult] = useState<CompletionResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
-  // Music preference is owned here so the toggle in the header and the
-  // YouTubeBackground iframe stay perfectly in sync without context plumbing.
-  const [musicUnmuted, setMusicUnmuted] = useLocalStorage<boolean>(
+  // Music preference (shared with the header MusicToggle via localStorage).
+  // Read-only here — we just feed the current value to the audio iframe.
+  const [musicUnmuted] = useLocalStorage<boolean>(
     'colorslide:music-unmuted',
     true,
   );
@@ -147,22 +153,24 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
         </div>
       </div>
 
-      <ColourSlideGame
-        key={level.coordinate}
-        initialBoard={level.board}
-        initialTiles={level.tiles}
-        levelLabel={level.title}
-        onComplete={handleComplete}
-        started={started}
-      />
+      {hasMusic && !started ? (
+        <PressStartScreen onStart={() => setStarted(true)} />
+      ) : (
+        <ColourSlideGame
+          key={level.coordinate}
+          initialBoard={level.board}
+          initialTiles={level.tiles}
+          levelLabel={level.title}
+          onComplete={handleComplete}
+          started
+        />
+      )}
 
       <YouTubeBackground
         key={`yt-${level.coordinate}`}
         url={level.youtubeUrl}
         unmuted={musicUnmuted}
-        onUnmutedChange={setMusicUnmuted}
         started={started}
-        onStartedChange={setStarted}
       />
 
       {result && (
