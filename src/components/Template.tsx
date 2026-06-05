@@ -8,6 +8,7 @@ import { PendingEventsBadge } from '@/components/PendingEventsBadge';
 import { MusicToggle } from '@/components/levels/MusicToggle';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { cn } from '@/lib/utils';
 
 type TemplateProps = {
   pageName?: string;
@@ -28,6 +29,8 @@ export function Template({
     'colorslide:music-unmuted',
     true,
   );
+
+  const isHero = brandVariant === 'hero';
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#fff5e6] text-[#2a1050]">
@@ -51,23 +54,31 @@ export function Template({
         </div>
       </header>
 
-      <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
-        <div className="rounded-3xl border-2 border-white/70 bg-white/35 p-4 shadow-[0_8px_40px_rgba(120,60,200,0.18)] backdrop-blur-lg sm:p-6">
-          <div className="mb-7 sm:mb-9">
-            <BrandLogo variant={brandVariant} />
-            {pageName ? (
-              <p className="arcade-label mt-4 text-center text-[11px] text-slate-700/80 sm:text-xs">
-                — {pageName} —
-              </p>
-            ) : null}
-            {subtitle ? (
-              <p className="arcade-label mt-2 text-center text-[10px] tracking-[0.18em] text-slate-900/70 sm:text-xs">
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
-          {children}
+      {/* Content floats directly over the bubble background. Only the brand
+          block sits on a frosted plate, sized to hug the wordmark so the
+          background stays visible around it. Hero pages (home) vertically
+          center so the whole menu lands above the fold. */}
+      <main
+        className={cn(
+          'relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-4 pb-8 pt-4 sm:px-6 sm:pt-6',
+          isHero && 'justify-center gap-6 sm:gap-8',
+        )}
+      >
+        <div className="w-fit max-w-full px-2 py-1 text-center sm:px-4">
+          <BrandLogo variant={brandVariant} />
+          {pageName ? (
+            <p className="arcade-label text-haloed mt-3 text-center text-[11px] text-slate-800 sm:text-xs">
+              — {pageName} —
+            </p>
+          ) : null}
+          {subtitle ? (
+            <p className="arcade-label text-haloed mt-2 text-center text-[10px] tracking-[0.18em] text-slate-900 sm:text-xs">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
+
+        <div className={cn('w-full', !isHero && 'mt-6 sm:mt-8')}>{children}</div>
       </main>
     </div>
   );

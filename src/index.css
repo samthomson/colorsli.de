@@ -167,9 +167,30 @@
      </p>
 */
 .brand-arcade-tagline {
+  /* Sticker-style white outline (8-way offsets) + glow + dark drop so the
+     dark tagline stays crisp directly over the busy multicolor bubble
+     background (no frosted panel behind it). */
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.75),
-    0 0 12px rgba(14, 165, 233, 0.25);
+    -1px -1px 0 rgba(255, 255, 255, 0.95),
+    1px -1px 0 rgba(255, 255, 255, 0.95),
+    -1px 1px 0 rgba(255, 255, 255, 0.95),
+    1px 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 6px rgba(255, 255, 255, 0.9),
+    0 0 14px rgba(255, 255, 255, 0.7),
+    0 2px 6px rgba(8, 47, 73, 0.5);
+}
+
+/* .text-haloed
+   Sticker-style white outline + glow for small dark text that sits directly
+   over the busy bubble background (page name / subtitle, etc.). */
+.text-haloed {
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.95),
+    1px -1px 0 rgba(255, 255, 255, 0.95),
+    -1px 1px 0 rgba(255, 255, 255, 0.95),
+    1px 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 8px rgba(255, 255, 255, 0.85),
+    0 2px 5px rgba(8, 47, 73, 0.45);
 }
 
 /* .arcade-pill

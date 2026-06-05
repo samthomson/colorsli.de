@@ -25,13 +25,13 @@ const Index = () => {
 
   return (
     <Template showExit={false} brandVariant="hero">
-      <section className="mx-auto flex w-full max-w-xl flex-col gap-3 sm:gap-4">
+      <section className="mx-auto flex w-full max-w-md flex-col gap-2.5 sm:gap-3">
         {homeLinks.map((item) => (
           <ArcadePill
             key={item.to}
             asChild
             tone={item.tone}
-            size="xl"
+            size="lg"
             block
             bob={false}
           >
