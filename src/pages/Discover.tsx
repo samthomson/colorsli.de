@@ -7,6 +7,7 @@ import { Template } from '@/components/Template';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LevelPreview } from '@/components/levels/LevelPreview';
+import { ShareLevelButton } from '@/components/ShareLevelButton';
 import { AdminLevelControls } from '@/components/levels/AdminLevelControls';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -144,6 +145,7 @@ function LevelCard({
             <PlayIcon className="h-3.5 w-3.5" />
             Play
           </Link>
+          <ShareLevelButton level={level} />
           {isOwn && (
             <Link
               to={`/create?edit=${naddr}`}

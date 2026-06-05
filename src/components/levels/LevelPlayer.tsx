@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ColourSlideGame, type CompletionResult } from '@/components/ColourSlideGame';
+import { ShareLevelButton } from '@/components/ShareLevelButton';
 import {
   LevelCompleteDialog,
   type SaveStatus,
@@ -134,6 +135,7 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
           <ArrowLeft className="h-4 w-4" />
           Back to levels
         </Button>
+        <ShareLevelButton level={level} />
       </div>
 
       <ColourSlideGame
