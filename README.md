@@ -87,8 +87,6 @@ special tiles / levels:
 - [ ] countdown, where if you don't complete it time - you fail and have to restart
 
 features:
-- [ ] slow, and the skeletons seem dumb (ie not matching what ends up loading)
-
 - [ ] zap a level author
 - [ ] level designer: button to randomly fill the remainder
 - [ ] espy color picker

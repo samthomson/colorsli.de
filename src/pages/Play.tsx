@@ -111,7 +111,11 @@ function OfficialProgression() {
     ? levels.find((l) => l.coordinate === activeCoordinate) ?? null
     : null;
 
-  if (officialLevels.isLoading || saveLoading) {
+  // Only block the grid on the level list itself. The encrypted save-game
+  // (which drives unlocks and needs a NIP-44 decrypt) can lag behind — we
+  // render the list as soon as it's ready and let unlock state fill in,
+  // rather than hiding everything behind a skeleton while it decrypts.
+  if (officialLevels.isLoading) {
     return <PlaySkeleton />;
   }
 
@@ -155,7 +159,7 @@ function OfficialProgression() {
   return (
     <div className="space-y-4">
       <div className="mx-auto w-fit rounded-full border border-cyan-200/60 bg-white/70 px-4 py-1.5 text-center text-xs font-medium text-slate-700 backdrop-blur">
-        Beat each level to unlock the next.
+        {saveLoading ? 'Syncing your progress…' : 'Beat each level to unlock the next.'}
       </div>
       <LevelGrid
         levels={levels}
