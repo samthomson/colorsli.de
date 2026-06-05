@@ -49,6 +49,8 @@ export const KINDS = {
   COMPLETION: 1,
   /** NIP-78 application-specific data: per-user encrypted save game. */
   SAVE_GAME: 30078,
+  /** NIP-09 deletion request — used to delete a user's own level. */
+  DELETION: 5,
 } as const;
 
 export const TAGS = {

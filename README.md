@@ -93,6 +93,7 @@ features:
 - [ ] more responsive homepage and elsewhere (ie when I go to it, I should just see stuff)
 - [ ] the intial splash screen has too much behind it, it shoudl jsut tbe the bubbles behind it
 - [ ] preload level list and discovery from teh start screen, so there's no loading later
+- [ ] slow, and the skeletons seem dumb (ie not matching what ends up loading)
 
 - [ ] zap a level author
 - [ ] level designer: button to randomly fill the remainder

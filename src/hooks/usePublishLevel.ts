@@ -31,6 +31,7 @@ export function usePublishLevel() {
       tiles: TilePalette;
       youtubeUrl?: string;
       existingDTag?: string;
+      forkOf?: { eventId: string };
     }) => {
       const template = buildLevelTemplate(args);
       setIsPending(true);

@@ -4,12 +4,15 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ColourSlideGame, type CompletionResult } from '@/components/ColourSlideGame';
 import { ShareLevelButton } from '@/components/ShareLevelButton';
+import { ForkLevelButton } from '@/components/levels/ForkLevelButton';
+import { DeleteLevelButton } from '@/components/levels/DeleteLevelButton';
 import {
   LevelCompleteDialog,
   type SaveStatus,
 } from '@/components/levels/LevelCompleteDialog';
 import { YouTubeBackground } from '@/components/levels/YouTubeBackground';
 import { useAppContext } from '@/hooks/useAppContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLocalStorage, useSessionStorage } from '@/hooks/useLocalStorage';
 import { usePublishCompletion } from '@/hooks/usePublishCompletion';
 import { useUpdateSaveGame } from '@/hooks/useUpdateSaveGame';
@@ -31,6 +34,8 @@ type LevelPlayerProps = {
  */
 export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayerProps) {
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
+  const isOwn = user?.pubkey === level.pubkey;
   const { config, updateConfig } = useAppContext();
   const updateSaveGame = useUpdateSaveGame();
   const { publishCompletion } = usePublishCompletion();
@@ -135,7 +140,11 @@ export function LevelPlayer({ level, nextLevel, onBack, onAdvance }: LevelPlayer
           <ArrowLeft className="h-4 w-4" />
           Back to levels
         </Button>
-        <ShareLevelButton level={level} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <ShareLevelButton level={level} />
+          <ForkLevelButton level={level} tone="indigo" />
+          {isOwn && <DeleteLevelButton level={level} tone="red" onDeleted={onBack} />}
+        </div>
       </div>
 
       <ColourSlideGame

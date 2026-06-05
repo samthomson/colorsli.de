@@ -35,13 +35,17 @@ const Create = () => {
 function CreateContent() {
   const [params] = useSearchParams();
   const editParam = params.get('edit');
+  const forkParam = params.get('fork');
+  // Edit takes precedence if both are somehow present.
+  const naddrParam = editParam ?? forkParam;
+  const isFork = !editParam && Boolean(forkParam);
 
   // Coordinate to fetch — derived from the naddr in the URL. Returns null
   // for any invalid input (wrong prefix, wrong kind, malformed).
   const coordinate = useMemo(() => {
-    if (!editParam) return null;
+    if (!naddrParam) return null;
     try {
-      const decoded = nip19.decode(editParam);
+      const decoded = nip19.decode(naddrParam);
       if (decoded.type !== 'naddr') return null;
       const { kind, pubkey, identifier } = decoded.data;
       if (kind !== KINDS.LEVEL) return null;
@@ -49,9 +53,9 @@ function CreateContent() {
     } catch {
       return null;
     }
-  }, [editParam]);
+  }, [naddrParam]);
 
-  if (!editParam) {
+  if (!naddrParam) {
     return <LevelEditor />;
   }
 
@@ -59,16 +63,21 @@ function CreateContent() {
     return (
       <Card className="border-dashed">
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          That edit link doesn't look right. Returning to a fresh editor.
+          That {isFork ? 'fork' : 'edit'} link doesn't look right. Returning to a fresh editor.
         </CardContent>
       </Card>
     );
   }
 
-  return <EditExistingLevel coordinate={coordinate} />;
+  return <LoadLevelIntoEditor coordinate={coordinate} fork={isFork} />;
 }
 
-function EditExistingLevel({ coordinate }: { coordinate: string }) {
+/**
+ * Loads a level by coordinate and hands it to the editor as either an edit
+ * (must be the author) or a fork (anyone). Forking skips the author check
+ * since it produces a brand-new level under the current user.
+ */
+function LoadLevelIntoEditor({ coordinate, fork }: { coordinate: string; fork: boolean }) {
   const { user } = useCurrentUser();
   const query = useLevelByCoordinate(coordinate);
 
@@ -93,19 +102,12 @@ function EditExistingLevel({ coordinate }: { coordinate: string }) {
     );
   }
 
-  // Only the author can replace an addressable event, so any other viewer
-  // gets a friendly message instead of an editor that would silently fail.
-  if (user?.pubkey !== query.data.pubkey) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          Only the author of a level can edit it. Try forking the design in a fresh editor instead.
-        </CardContent>
-      </Card>
-    );
-  }
+  // Editing replaces an addressable event, which only its author can do.
+  // If a non-author lands on an edit link, fall back to forking so the
+  // design isn't a dead end.
+  const mustFork = fork || user?.pubkey !== query.data.pubkey;
 
-  return <LevelEditor initial={query.data} />;
+  return <LevelEditor initial={query.data} fork={mustFork} />;
 }
 
 export default Create;

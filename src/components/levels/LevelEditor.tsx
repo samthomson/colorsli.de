@@ -41,12 +41,19 @@ const DEFAULT_DIM = 6;
 
 type LevelEditorProps = {
   /**
-   * If provided, the editor opens in *edit mode*: fields are pre-filled
-   * from this level, and publishing replaces the level (reuses the d-tag)
-   * rather than creating a new one. Author should already be checked by
-   * the caller — only the level's author can replace it.
+   * If provided, the editor opens pre-filled from this level.
+   *
+   * - **Edit mode** (`fork` false/omitted): publishing reuses the level's
+   *   d-tag, replacing the prior revision. The caller must ensure the
+   *   current user is the level's author (only the author can replace it).
+   * - **Fork mode** (`fork` true): the level is used purely as a starting
+   *   point. Publishing creates a brand-new level under the current user
+   *   with a fresh d-tag, so anyone can fork anyone's design. No author
+   *   check required.
    */
   initial?: ParsedLevel;
+  /** Open as a fork (new level seeded from `initial`) rather than an edit. */
+  fork?: boolean;
 };
 
 /**
@@ -68,12 +75,14 @@ type LevelEditorProps = {
  *   palette to `usePublishLevel`. `buildLevelTemplate` strips unused
  *   entries before emitting the kind-37283 event.
  */
-export function LevelEditor({ initial }: LevelEditorProps = {}) {
+export function LevelEditor({ initial, fork = false }: LevelEditorProps = {}) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { publishLevel, isPending } = usePublishLevel();
 
-  const isEdit = Boolean(initial);
+  // Edit = replace the existing level (reuse d-tag). Fork = seed a new level
+  // from `initial` but publish fresh. Both pre-fill the fields below.
+  const isEdit = Boolean(initial) && !fork;
 
   const [title, setTitle] = useState(initial?.title ?? '');
   const [youtubeUrl, setYoutubeUrl] = useState(initial?.youtubeUrl ?? '');
@@ -321,10 +330,12 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
         board,
         tiles,
         youtubeUrl: trimmedYoutube || undefined,
-        existingDTag: initial?.dTag,
+        existingDTag: isEdit ? initial?.dTag : undefined,
+        // In fork mode, reference the exact source revision (reply-style).
+        forkOf: fork && initial ? { eventId: initial.id } : undefined,
       });
       toast({
-        title: isEdit ? 'Level updated' : 'Level published',
+        title: isEdit ? 'Level updated' : fork ? 'Level forked' : 'Level published',
         description: isEdit
           ? 'Your changes are live for everyone.'
           : 'Your level is now in Discover.',
@@ -349,12 +360,14 @@ export function LevelEditor({ initial }: LevelEditorProps = {}) {
     <Card className="w-full shadow-2xl">
       <CardHeader className="space-y-3">
         <CardTitle className="brand-arcade-title bg-clip-text text-transparent text-3xl leading-none sm:text-4xl">
-          {isEdit ? 'Edit Level' : 'Level Editor'}
+          {isEdit ? 'Edit Level' : fork ? 'Fork Level' : 'Level Editor'}
         </CardTitle>
         <p className="arcade-label text-[10px] tracking-[0.18em] text-muted-foreground">
           {isEdit
             ? 'Update this level. Republishing replaces the previous revision so existing unlocks and leaderboard entries carry over.'
-            : 'Paint tiles to design a level. Each tile must appear in multiples of 4, and no row/column may contain 4+ of the same tile in a row. Publish to share with the community.'}
+            : fork
+              ? "You're forking an existing level. Tweak it however you like — publishing creates a brand-new level under your account, leaving the original untouched."
+              : 'Paint tiles to design a level. Each tile must appear in multiples of 4, and no row/column may contain 4+ of the same tile in a row. Publish to share with the community.'}
         </p>
       </CardHeader>
 

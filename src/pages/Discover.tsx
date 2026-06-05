@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LevelPreview } from '@/components/levels/LevelPreview';
 import { ShareLevelButton } from '@/components/ShareLevelButton';
+import { ForkLevelButton } from '@/components/levels/ForkLevelButton';
+import { DeleteLevelButton } from '@/components/levels/DeleteLevelButton';
 import { ArcadePill } from '@/components/ArcadePill';
 import { AdminLevelControls } from '@/components/levels/AdminLevelControls';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -147,13 +149,17 @@ function LevelCard({
           </ArcadePill>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ShareLevelButton level={level} tone="emerald" />
+            <ForkLevelButton level={level} tone="indigo" />
             {isOwn && (
-              <ArcadePill asChild tone="amber" size="sm">
-                <Link to={`/create?edit=${naddr}`}>
-                  <Pencil />
-                  Edit
-                </Link>
-              </ArcadePill>
+              <>
+                <ArcadePill asChild tone="amber" size="sm">
+                  <Link to={`/create?edit=${naddr}`}>
+                    <Pencil />
+                    Edit
+                  </Link>
+                </ArcadePill>
+                <DeleteLevelButton level={level} tone="red" />
+              </>
             )}
           </div>
         </div>

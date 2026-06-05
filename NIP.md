@@ -104,6 +104,40 @@ When deduping query results, the client keeps the highest `created_at` per
 coordinate. Relays that honour addressable replacement will only return one
 revision per coordinate anyway; the client-side dedupe is defense-in-depth.
 
+### Forking
+
+Anyone can *fork* any level (their own, someone else's, or an official one):
+the editor loads the level as a starting point but publishes a **brand-new**
+event with a freshly generated random `d` tag under the forking user's
+pubkey. This produces an independent level coordinate — the original is
+untouched.
+
+A fork references its source revision the way a NIP-10 reply references its
+parent:
+
+- `["e", "<event-id>", "", "fork"]` — the exact revision that was forked.
+
+This is attribution/provenance only; play does not depend on resolving the
+source event (the fork embeds its own full board + palette snapshot).
+`parseLevelEvent` surfaces it as `ParsedLevel.forkOf`.
+
+### Deletion (NIP-09)
+
+A level author can delete their own level by publishing a **kind 5** deletion
+request:
+
+- `["a", "37283:<author>:<d>"]` — the level coordinate, so every revision is
+  targeted.
+- `["e", "<event-id>"]` — the latest revision's event id.
+- `["k", "37283"]` — the kind being deleted.
+- `["t", "colorslide"]` — app filter tag.
+
+Deletion is a request, not a guarantee: only relays/clients that honour
+NIP-09 will drop the level, and only kind-5 events signed by the level's
+author are respected. The client optimistically removes the level from local
+caches so it disappears from Discover immediately. Forks are independent
+events and are **not** affected by deleting the original.
+
 ---
 
 ## Kind 37284 — Color Slide reusable tile (addressable)

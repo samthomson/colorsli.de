@@ -62,6 +62,11 @@ export type ParsedLevel = {
   cols: number;
   /** Optional YouTube URL to play as background music while playing. */
   youtubeUrl?: string;
+  /**
+   * If this level was forked from another, the source revision's event id
+   * (from the `e` fork tag). Undefined for original levels.
+   */
+  forkOf?: { eventId: string };
   /** Original event for reference / re-publishing. */
   event: NostrEvent;
 };
@@ -76,6 +81,9 @@ export type ParsedLevel = {
  * Pass `existingDTag` to reuse a prior level's d-tag — that turns the
  * publish into a replacement (edit) of the previous revision. Omit it to
  * create a brand-new level (a fresh random d-tag is generated).
+ *
+ * Pass `forkOf` when this level is forked from another: it records the
+ * exact source revision via an `e` tag (marked `fork`), reply-style.
  */
 export function buildLevelTemplate(args: {
   title: string;
@@ -83,8 +91,9 @@ export function buildLevelTemplate(args: {
   tiles: TilePalette;
   youtubeUrl?: string;
   existingDTag?: string;
+  forkOf?: { eventId: string };
 }): LevelEventTemplate {
-  const { title, board, tiles, youtubeUrl, existingDTag } = args;
+  const { title, board, tiles, youtubeUrl, existingDTag, forkOf } = args;
   const rows = board.length;
   const cols = rows > 0 ? board[0].length : 0;
 
@@ -124,6 +133,11 @@ export function buildLevelTemplate(args: {
   ];
 
   if (hasLogic) tags.push(['t', TAGS.LOGIC]);
+
+  // Fork attribution: reference the exact source revision, reply-style.
+  if (forkOf) {
+    tags.push(['e', forkOf.eventId, '', 'fork']);
+  }
 
   const trimmedYt = youtubeUrl?.trim();
   if (trimmedYt) {
@@ -187,6 +201,10 @@ export function parseLevelEvent(event: NostrEvent): ParsedLevel | null {
   const cols = Number(event.tags.find(([n]) => n === 'cols')?.[1]) || (board[0]?.length ?? 0);
   const youtubeUrl = event.tags.find(([n]) => n === 'youtube')?.[1]?.trim() || undefined;
 
+  // Fork provenance: the `e` tag marked `fork` points at the source revision.
+  const forkEventId = event.tags.find(([n, , , marker]) => n === 'e' && marker === 'fork')?.[1];
+  const forkOf = forkEventId ? { eventId: forkEventId } : undefined;
+
   return {
     id: event.id,
     coordinate: buildLevelCoordinate(event.pubkey, dTag),
@@ -198,6 +216,7 @@ export function parseLevelEvent(event: NostrEvent): ParsedLevel | null {
     rows,
     cols,
     youtubeUrl,
+    forkOf,
     event,
   };
 }
